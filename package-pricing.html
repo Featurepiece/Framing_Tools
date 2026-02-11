@@ -1,0 +1,2175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Package Pricing Calculator</title>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=Playfair+Display:wght@500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #f8f6f3;
+            --bg-secondary: #ffffff;
+            --bg-accent: #2c3e50;
+            --text-primary: #2c3e50;
+            --text-secondary: #6b7c8a;
+            --text-light: #ffffff;
+            --accent: #c9a87c;
+            --accent-hover: #b8956a;
+            --border: #e8e4df;
+            --shadow: rgba(44, 62, 80, 0.08);
+            --danger: #c0392b;
+            --danger-hover: #a5311f;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'DM Sans', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 40px 24px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+
+        h1 {
+            font-family: 'Playfair Display', serif;
+            font-size: 2.5rem;
+            font-weight: 500;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+        }
+
+        .subtitle {
+            color: var(--text-secondary);
+            font-size: 1rem;
+        }
+
+        .top-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 32px;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .data-controls {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .export-filename {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .export-filename input {
+            padding: 8px 12px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.875rem;
+            width: 180px;
+        }
+
+        .export-filename input:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .btn {
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.875rem;
+            font-weight: 500;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: var(--text-light);
+        }
+
+        .btn-primary:hover {
+            background: var(--accent-hover);
+        }
+
+        .btn-secondary {
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+        }
+
+        .btn-secondary:hover {
+            background: var(--border);
+        }
+
+        .btn-danger {
+            background: var(--danger);
+            color: var(--text-light);
+        }
+
+        .btn-danger:hover {
+            background: var(--danger-hover);
+        }
+
+        .btn-small {
+            padding: 6px 12px;
+            font-size: 0.8rem;
+        }
+
+        .btn-settings {
+            background: var(--bg-accent);
+            color: var(--text-light);
+        }
+
+        .btn-settings:hover {
+            background: #3d5166;
+        }
+
+        .panel {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            box-shadow: 0 2px 12px var(--shadow);
+            overflow: hidden;
+            margin-bottom: 24px;
+        }
+
+        .panel-header {
+            background: var(--bg-accent);
+            color: var(--text-light);
+            padding: 16px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .panel-header h2 {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.25rem;
+            font-weight: 500;
+        }
+
+        .panel-content {
+            padding: 20px;
+        }
+
+        /* View Toggle */
+        .view-toggle {
+            display: flex;
+            gap: 8px;
+        }
+
+        .view-toggle .btn {
+            padding: 6px 14px;
+        }
+
+        .view-toggle .btn.active {
+            background: var(--accent);
+            color: var(--text-light);
+            border-color: var(--accent);
+        }
+
+        /* Packages Panel */
+        .packages-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .package-tabs {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .tab {
+            padding: 8px 12px;
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.875rem;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .tab:hover {
+            border-color: var(--accent);
+        }
+
+        .tab.active {
+            background: var(--accent);
+            color: var(--text-light);
+            border-color: var(--accent);
+        }
+
+        .tab-name {
+            cursor: pointer;
+            padding: 0 4px;
+        }
+
+        .tab-close {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+            cursor: pointer;
+            background: transparent;
+            border: none;
+            color: inherit;
+            opacity: 0.7;
+            transition: all 0.2s ease;
+        }
+
+        .tab-close:hover {
+            opacity: 1;
+            background: rgba(0,0,0,0.1);
+        }
+
+        .tab.active .tab-close:hover {
+            background: rgba(255,255,255,0.2);
+        }
+
+        .pack-reorder-btn {
+            width: 22px;
+            height: 22px;
+            border: 1px solid var(--border);
+            background: var(--bg-secondary);
+            border-radius: 4px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.65rem;
+            transition: all 0.2s ease;
+            color: var(--text-primary);
+        }
+
+        .tab.active .pack-reorder-btn {
+            border-color: rgba(255,255,255,0.3);
+            background: rgba(255,255,255,0.1);
+            color: var(--text-light);
+        }
+
+        .pack-reorder-btn:hover {
+            background: var(--accent);
+            color: var(--text-light);
+            border-color: var(--accent);
+        }
+
+        .pack-reorder-btn:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+
+        .pack-reorder-btn:disabled:hover {
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            border-color: var(--border);
+        }
+
+        .tab.active .pack-reorder-btn:disabled:hover {
+            background: rgba(255,255,255,0.1);
+            color: var(--text-light);
+            border-color: rgba(255,255,255,0.3);
+        }
+
+        .package-builder {
+            display: none;
+        }
+
+        .package-builder.active {
+            display: block;
+        }
+
+        /* Category Accordion */
+        .category-group {
+            margin-bottom: 12px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .category-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 14px 16px;
+            background: var(--bg-primary);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            user-select: none;
+        }
+
+        .category-header:hover {
+            background: var(--border);
+        }
+
+        .category-header-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .category-toggle {
+            font-size: 0.8rem;
+            transition: transform 0.2s ease;
+            color: var(--text-secondary);
+        }
+
+        .category-group.collapsed .category-toggle {
+            transform: rotate(-90deg);
+        }
+
+        .category-name {
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+
+        .category-misc-badge {
+            font-size: 0.75rem;
+            color: var(--accent);
+            font-weight: 500;
+        }
+
+        .category-count {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            background: var(--bg-secondary);
+            padding: 2px 8px;
+            border-radius: 10px;
+        }
+
+        .category-items {
+            padding: 12px;
+            background: var(--bg-secondary);
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 10px;
+        }
+
+        .category-group.collapsed .category-items {
+            display: none;
+        }
+
+        .product-row {
+            display: flex;
+            flex-direction: column;
+            padding: 12px;
+            background: var(--bg-primary);
+            border-radius: 6px;
+            gap: 8px;
+        }
+
+        .product-row-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+
+        .product-row-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .product-row-name {
+            font-weight: 500;
+            font-size: 0.9rem;
+            margin-bottom: 2px;
+        }
+
+        .product-row-price {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
+        .product-row-total {
+            font-weight: 600;
+            color: var(--accent);
+            font-size: 0.9rem;
+            text-align: right;
+            min-width: 60px;
+        }
+
+        .product-row-bottom {
+            display: flex;
+            justify-content: flex-start;
+        }
+
+        .product-row-controls {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .product-row-controls button {
+            width: 28px;
+            height: 28px;
+            border-radius: 4px;
+            border: 1px solid var(--border);
+            background: var(--bg-secondary);
+            cursor: pointer;
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+        }
+
+        .product-row-controls button:hover {
+            background: var(--accent);
+            color: var(--text-light);
+            border-color: var(--accent);
+        }
+
+        .product-row-controls input {
+            width: 50px;
+            text-align: center;
+            padding: 6px;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.9rem;
+        }
+
+        .product-row-controls input:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        /* Package Misc Input */
+        .package-misc-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-top: 16px;
+            padding: 12px 16px;
+            background: var(--bg-primary);
+            border-radius: 8px;
+        }
+
+        .package-misc-row label {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+
+        .package-misc-row input {
+            width: 80px;
+            padding: 8px 10px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.9rem;
+            text-align: center;
+        }
+
+        .package-misc-row input:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        /* Package Summary */
+        .package-summary {
+            background: var(--bg-accent);
+            border-radius: 8px;
+            padding: 20px;
+            color: var(--text-light);
+            margin-top: 20px;
+        }
+
+        .summary-title {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.1rem;
+            margin-bottom: 16px;
+            opacity: 0.9;
+        }
+
+        .summary-items {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 16px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .summary-item {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.9rem;
+            opacity: 0.85;
+        }
+
+        .summary-item.misc-item {
+            opacity: 0.7;
+            font-style: italic;
+        }
+
+        .summary-divider {
+            height: 1px;
+            background: rgba(255,255,255,0.2);
+            margin: 12px 0;
+        }
+
+        .summary-total {
+            display: flex;
+            justify-content: space-between;
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+
+        /* All Packs Summary View */
+        .all-packs-summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+        }
+
+        .all-packs-summary .package-summary {
+            margin-top: 0;
+        }
+
+        /* Empty States */
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--text-secondary);
+        }
+
+        .empty-state-icon {
+            font-size: 2.5rem;
+            margin-bottom: 12px;
+            opacity: 0.5;
+        }
+
+        /* Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            padding: 24px;
+            width: 90%;
+            max-width: 400px;
+        }
+
+        .modal-large {
+            max-width: 750px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal h3 {
+            font-family: 'Playfair Display', serif;
+            margin-bottom: 16px;
+        }
+
+        .modal-form {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .modal-form label {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+        }
+
+        .modal-form input, .modal-form select {
+            padding: 10px 12px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.9rem;
+        }
+
+        .modal-form input:focus, .modal-form select:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 8px;
+        }
+
+        .modal-actions .btn {
+            flex: 1;
+        }
+
+        /* Settings Panel */
+        .settings-section {
+            margin-bottom: 24px;
+            padding-bottom: 24px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .settings-section:last-of-type {
+            border-bottom: none;
+            margin-bottom: 16px;
+        }
+
+        .settings-section h4 {
+            font-family: 'Playfair Display', serif;
+            font-size: 1rem;
+            margin-bottom: 12px;
+            color: var(--text-primary);
+        }
+
+        .settings-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .settings-row label {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+
+        .settings-row input[type="number"] {
+            width: 80px;
+            padding: 8px 12px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.9rem;
+            text-align: center;
+        }
+
+        .settings-row input[type="number"]:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .settings-row input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+
+        .markup-hint {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
+        /* Categories in Settings */
+        .category-list-settings {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+
+        .category-tag {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            background: var(--bg-primary);
+            border-radius: 8px;
+            font-size: 0.85rem;
+        }
+
+        .category-tag-name {
+            flex: 1;
+            font-weight: 500;
+        }
+
+        .category-tag-misc {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
+        .category-tag-misc input {
+            width: 60px;
+            padding: 4px 8px;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.8rem;
+            text-align: center;
+        }
+
+        .category-tag-misc input:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .category-tag-btn {
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            border: none;
+            background: var(--border);
+            color: var(--text-secondary);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.65rem;
+            transition: all 0.2s ease;
+        }
+
+        .category-tag-btn.edit:hover {
+            background: var(--accent);
+            color: var(--text-light);
+        }
+
+        .category-tag-btn.delete:hover {
+            background: var(--danger);
+            color: var(--text-light);
+        }
+
+        .add-category-form {
+            display: flex;
+            gap: 8px;
+        }
+
+        .add-category-form input[type="text"] {
+            flex: 1;
+            padding: 8px 12px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.9rem;
+        }
+
+        .add-category-form input[type="number"] {
+            width: 70px;
+            padding: 8px 10px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.9rem;
+            text-align: center;
+        }
+
+        .add-category-form input:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        /* Products in Settings */
+        .add-product-form {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+        }
+
+        .add-product-form input, .add-product-form select {
+            padding: 10px 12px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.9rem;
+        }
+
+        .add-product-form input:focus, .add-product-form select:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .add-product-form input[type="text"] {
+            flex: 1;
+            min-width: 100px;
+        }
+
+        .add-product-form input[type="number"] {
+            width: 70px;
+        }
+
+        .add-product-form select {
+            min-width: 110px;
+        }
+
+        .product-list-settings {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .product-item-settings {
+            display: grid;
+            grid-template-columns: 1fr auto auto auto auto auto auto;
+            gap: 8px;
+            align-items: center;
+            padding: 10px 12px;
+            background: var(--bg-primary);
+            border-radius: 8px;
+            font-size: 0.8rem;
+        }
+
+        .product-item-settings .product-name {
+            font-weight: 500;
+        }
+
+        .product-item-settings .product-category {
+            color: var(--text-secondary);
+            font-size: 0.75rem;
+        }
+
+        .product-item-settings .product-sort {
+            color: var(--text-secondary);
+            font-size: 0.75rem;
+            min-width: 35px;
+            text-align: center;
+        }
+
+        .product-item-settings .product-cost,
+        .product-item-settings .product-misc {
+            color: var(--text-secondary);
+            text-align: right;
+            min-width: 50px;
+        }
+
+        .product-item-settings .product-sell {
+            color: var(--accent);
+            font-weight: 600;
+            text-align: right;
+            min-width: 50px;
+        }
+
+        .product-actions {
+            display: flex;
+            gap: 4px;
+        }
+
+        .btn-icon {
+            width: 24px;
+            height: 24px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 0.65rem;
+        }
+
+        .btn-edit {
+            background: var(--border);
+            color: var(--text-secondary);
+        }
+
+        .btn-edit:hover {
+            background: var(--accent);
+            color: var(--text-light);
+        }
+
+        .btn-delete {
+            background: var(--border);
+            color: var(--text-secondary);
+        }
+
+        .btn-delete:hover {
+            background: var(--danger);
+            color: var(--text-light);
+        }
+
+        .product-list-header {
+            display: grid;
+            grid-template-columns: 1fr auto auto auto auto auto auto;
+            gap: 8px;
+            padding: 0 12px 8px 12px;
+            font-size: 0.65rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .product-list-header span:nth-child(3) {
+            min-width: 35px;
+            text-align: center;
+        }
+
+        .product-list-header span:nth-child(4),
+        .product-list-header span:nth-child(5),
+        .product-list-header span:nth-child(6) {
+            text-align: right;
+            min-width: 50px;
+        }
+
+        .product-list-header span:nth-child(7) {
+            min-width: 52px;
+        }
+
+        /* PIN Input */
+        .pin-input {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+            margin: 20px 0;
+        }
+
+        .pin-input input {
+            width: 45px;
+            height: 50px;
+            text-align: center;
+            font-size: 1.25rem;
+            font-weight: 600;
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            font-family: 'DM Sans', sans-serif;
+        }
+
+        .pin-input input:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .pin-error {
+            color: var(--danger);
+            text-align: center;
+            font-size: 0.875rem;
+            margin-top: 8px;
+            display: none;
+        }
+
+        .pin-error.show {
+            display: block;
+        }
+
+        #importInput {
+            display: none;
+        }
+
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg-primary);
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--text-secondary);
+        }
+
+        @media (max-width: 700px) {
+            .product-item-settings {
+                grid-template-columns: 1fr;
+                gap: 4px;
+            }
+            
+            .product-item-settings .product-cost,
+            .product-item-settings .product-misc,
+            .product-item-settings .product-sell,
+            .product-item-settings .product-sort {
+                text-align: left;
+            }
+            
+            .product-list-header {
+                display: none;
+            }
+
+            .category-items {
+                grid-template-columns: 1fr;
+            }
+
+            .export-filename {
+                width: 100%;
+            }
+
+            .export-filename input {
+                flex: 1;
+            }
+
+            .category-tag {
+                flex-wrap: wrap;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Package Pricing</h1>
+            <p class="subtitle">Photography package calculator</p>
+        </header>
+
+        <div class="top-controls">
+            <div class="data-controls">
+                <div class="export-filename">
+                    <input type="text" id="exportFilename" placeholder="Filename" value="package-pricing">
+                    <button class="btn btn-secondary" onclick="exportData()">📁 Export</button>
+                </div>
+                <button class="btn btn-secondary" onclick="document.getElementById('importInput').click()">📂 Import</button>
+                <input type="file" id="importInput" accept=".json" onchange="importData(event)">
+            </div>
+            <button class="btn btn-settings" onclick="openPinModal()">⚙️ Settings</button>
+        </div>
+
+        <div class="panel">
+            <div class="panel-header">
+                <h2>Packages</h2>
+                <div class="view-toggle">
+                    <button class="btn btn-secondary btn-small active" id="btnViewBuilder" onclick="setView('builder')">Builder</button>
+                    <button class="btn btn-secondary btn-small" id="btnViewSummary" onclick="setView('summary')">Summary</button>
+                </div>
+            </div>
+            <div class="panel-content">
+                <!-- Builder View -->
+                <div id="builderView">
+                    <div class="packages-header">
+                        <div class="package-tabs" id="packageTabs"></div>
+                        <button class="btn btn-primary btn-small" onclick="addPackage()">+ New Pack</button>
+                    </div>
+                    <div id="packageBuilders">
+                        <div class="empty-state">
+                            <div class="empty-state-icon">📋</div>
+                            <p>No packages yet.<br>Click "New Pack" to create one.</p>
+                        </div>
+                    </div>
+                </div>
+                <!-- Summary View -->
+                <div id="summaryView" style="display: none;">
+                    <div class="all-packs-summary" id="allPacksSummary"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- PIN Modal -->
+    <div class="modal-overlay" id="pinModal">
+        <div class="modal">
+            <h3>Enter PIN</h3>
+            <p style="color: var(--text-secondary); font-size: 0.9rem; text-align: center;">Enter your PIN to access settings</p>
+            <div class="pin-input">
+                <input type="password" maxlength="1" id="pin1" oninput="handlePinInput(this, 'pin2')" onkeydown="handlePinKeydown(event, this, null)">
+                <input type="password" maxlength="1" id="pin2" oninput="handlePinInput(this, 'pin3')" onkeydown="handlePinKeydown(event, this, 'pin1')">
+                <input type="password" maxlength="1" id="pin3" oninput="handlePinInput(this, 'pin4')" onkeydown="handlePinKeydown(event, this, 'pin2')">
+                <input type="password" maxlength="1" id="pin4" oninput="handlePinInput(this, null)" onkeydown="handlePinKeydown(event, this, 'pin3')">
+            </div>
+            <p class="pin-error" id="pinError">Incorrect PIN. Please try again.</p>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="closePinModal()">Cancel</button>
+                <button class="btn btn-primary" onclick="verifyPin()">Enter</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div class="modal-overlay" id="settingsModal">
+        <div class="modal modal-large">
+            <h3>⚙️ Settings</h3>
+            
+            <div class="settings-section">
+                <h4>Display Options</h4>
+                <div class="settings-row">
+                    <input type="checkbox" id="showPricesInSummary" checked onchange="updateShowPrices()">
+                    <label for="showPricesInSummary">Show prices in summary</label>
+                </div>
+            </div>
+
+            <div class="settings-section">
+                <h4>Markup Multiplier</h4>
+                <div class="settings-row">
+                    <label>Multiplier:</label>
+                    <input type="number" id="markupMultiplier" value="1.5" step="0.1" min="1" onchange="updateMarkup()">
+                </div>
+                <p class="markup-hint">Selling price = (Cost × Multiplier) + Misc</p>
+            </div>
+
+            <div class="settings-section">
+                <h4>Categories</h4>
+                <p class="markup-hint" style="margin-bottom: 12px;">You can set a misc cost per category (added once if any products from that category are in a package)</p>
+                <div class="category-list-settings" id="categoryList"></div>
+                <div class="add-category-form">
+                    <input type="text" id="categoryName" placeholder="New category name">
+                    <input type="number" id="categoryMisc" placeholder="Misc £" step="0.01" min="0" value="0">
+                    <button class="btn btn-primary btn-small" onclick="addCategory()">Add</button>
+                </div>
+            </div>
+
+            <div class="settings-section">
+                <h4>Products</h4>
+                <div class="add-product-form">
+                    <input type="text" id="productName" placeholder="Product name">
+                    <select id="productCategory">
+                        <option value="">Category</option>
+                    </select>
+                    <input type="number" id="productCost" placeholder="Cost" step="0.01" min="0">
+                    <input type="number" id="productMisc" placeholder="Misc" step="0.01" min="0" value="0">
+                    <input type="number" id="productSort" placeholder="Order" step="1" min="0" value="10">
+                    <button class="btn btn-primary" onclick="addProduct()">Add</button>
+                </div>
+                
+                <div class="product-list-header">
+                    <span>Product</span>
+                    <span>Category</span>
+                    <span>Order</span>
+                    <span>Cost</span>
+                    <span>Misc</span>
+                    <span>Sell</span>
+                    <span></span>
+                </div>
+                <div class="product-list-settings" id="productList">
+                    <div class="empty-state" style="padding: 20px;">
+                        <p>No products yet. Add categories first, then add products.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-actions">
+                <button class="btn btn-primary" onclick="closeSettingsModal()">Done</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Product Modal -->
+    <div class="modal-overlay" id="editProductModal">
+        <div class="modal">
+            <h3>Edit Product</h3>
+            <div class="modal-form">
+                <div>
+                    <label>Product Name</label>
+                    <input type="text" id="editProductName">
+                </div>
+                <div>
+                    <label>Category</label>
+                    <select id="editProductCategory"></select>
+                </div>
+                <div>
+                    <label>Cost (£)</label>
+                    <input type="number" id="editProductCost" step="0.01" min="0">
+                </div>
+                <div>
+                    <label>Misc (£)</label>
+                    <input type="number" id="editProductMisc" step="0.01" min="0">
+                </div>
+                <div>
+                    <label>Sort Order</label>
+                    <input type="number" id="editProductSort" step="1" min="0">
+                </div>
+                <input type="hidden" id="editProductId">
+                <div class="modal-actions">
+                    <button class="btn btn-secondary" onclick="closeEditProductModal()">Cancel</button>
+                    <button class="btn btn-primary" onclick="saveProductEdit()">Save</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Category Modal -->
+    <div class="modal-overlay" id="editCategoryModal">
+        <div class="modal">
+            <h3>Edit Category</h3>
+            <div class="modal-form">
+                <div>
+                    <label>Category Name</label>
+                    <input type="text" id="editCategoryName">
+                </div>
+                <div>
+                    <label>Misc Cost (£)</label>
+                    <input type="number" id="editCategoryMisc" step="0.01" min="0">
+                </div>
+                <input type="hidden" id="editCategoryId">
+                <div class="modal-actions">
+                    <button class="btn btn-secondary" onclick="closeEditCategoryModal()">Cancel</button>
+                    <button class="btn btn-primary" onclick="saveCategoryEdit()">Save</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let data = {
+            categories: [],
+            products: [],
+            packages: [],
+            markup: 1.5,
+            pin: '3786',
+            showPricesInSummary: true
+        };
+
+        let activePackageId = null;
+        let nextProductId = 1;
+        let nextPackageId = 1;
+        let nextCategoryId = 1;
+        let expandedCategories = {};
+        let currentView = 'builder';
+
+        function calculateSellingPrice(cost, misc) {
+            return (cost * data.markup) + misc;
+        }
+
+        function init() {
+            document.getElementById('markupMultiplier').value = data.markup;
+            document.getElementById('showPricesInSummary').checked = data.showPricesInSummary;
+            renderCategories();
+            renderProducts();
+            renderPackages();
+        }
+
+        // View Toggle
+        function setView(view) {
+            currentView = view;
+            document.getElementById('btnViewBuilder').classList.toggle('active', view === 'builder');
+            document.getElementById('btnViewSummary').classList.toggle('active', view === 'summary');
+            document.getElementById('builderView').style.display = view === 'builder' ? 'block' : 'none';
+            document.getElementById('summaryView').style.display = view === 'summary' ? 'block' : 'none';
+            
+            if (view === 'summary') {
+                renderAllPacksSummary();
+            }
+        }
+
+        function calculatePackageTotal(pkg) {
+            let productTotal = 0;
+            let categoryMiscTotal = 0;
+            const categoriesUsed = new Set();
+
+            data.products.forEach(product => {
+                const quantity = pkg.items[product.id] || 0;
+                if (quantity > 0) {
+                    const sellPrice = calculateSellingPrice(product.cost, product.misc);
+                    productTotal += quantity * sellPrice;
+                    categoriesUsed.add(product.categoryId);
+                }
+            });
+
+            // Add category misc for each category used
+            categoriesUsed.forEach(catId => {
+                const category = data.categories.find(c => c.id === catId);
+                if (category && category.misc) {
+                    categoryMiscTotal += category.misc;
+                }
+            });
+
+            const packageMisc = pkg.misc || 0;
+            const grandTotal = productTotal + categoryMiscTotal + packageMisc;
+
+            return { productTotal, categoryMiscTotal, packageMisc, grandTotal, categoriesUsed };
+        }
+
+        function renderAllPacksSummary() {
+            const container = document.getElementById('allPacksSummary');
+            
+            if (data.packages.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📋</div>
+                        <p>No packages yet. Create some packages in Builder view first.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            const showPrices = data.showPricesInSummary;
+
+            container.innerHTML = data.packages.map(pkg => {
+                const summaryItems = [];
+                const totals = calculatePackageTotal(pkg);
+                
+                data.products.forEach(product => {
+                    const quantity = pkg.items[product.id] || 0;
+                    if (quantity > 0) {
+                        const sellPrice = calculateSellingPrice(product.cost, product.misc);
+                        const lineTotal = quantity * sellPrice;
+                        summaryItems.push({
+                            name: product.name,
+                            quantity: quantity,
+                            total: lineTotal
+                        });
+                    }
+                });
+
+                if (summaryItems.length === 0) {
+                    return `
+                        <div class="package-summary">
+                            <div class="summary-title">${escapeHtml(pkg.name)}</div>
+                            <p style="opacity: 0.7; font-size: 0.9rem;">No items in this package.</p>
+                        </div>
+                    `;
+                }
+
+                // Build category misc items for display
+                const categoryMiscItems = [];
+                totals.categoriesUsed.forEach(catId => {
+                    const category = data.categories.find(c => c.id === catId);
+                    if (category && category.misc) {
+                        categoryMiscItems.push({
+                            name: `${category.name} fee`,
+                            total: category.misc
+                        });
+                    }
+                });
+
+                return `
+                    <div class="package-summary">
+                        <div class="summary-title">${escapeHtml(pkg.name)}</div>
+                        <div class="summary-items">
+                            ${summaryItems.map(item => `
+                                <div class="summary-item">
+                                    <span>${item.quantity}× ${escapeHtml(item.name)}</span>
+                                    ${showPrices ? `<span>£${item.total.toFixed(2)}</span>` : ''}
+                                </div>
+                            `).join('')}
+                            ${showPrices && categoryMiscItems.length > 0 ? categoryMiscItems.map(item => `
+                                <div class="summary-item misc-item">
+                                    <span>${escapeHtml(item.name)}</span>
+                                    <span>£${item.total.toFixed(2)}</span>
+                                </div>
+                            `).join('') : ''}
+                            ${showPrices && pkg.misc ? `
+                                <div class="summary-item misc-item">
+                                    <span>Package fee</span>
+                                    <span>£${pkg.misc.toFixed(2)}</span>
+                                </div>
+                            ` : ''}
+                        </div>
+                        ${showPrices ? `
+                            <div class="summary-divider"></div>
+                            <div class="summary-total">
+                                <span>Package Price</span>
+                                <span>£${totals.grandTotal.toFixed(2)}</span>
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Settings
+        function updateShowPrices() {
+            data.showPricesInSummary = document.getElementById('showPricesInSummary').checked;
+            if (currentView === 'summary') {
+                renderAllPacksSummary();
+            }
+        }
+
+        // PIN handling
+        function openPinModal() {
+            document.getElementById('pinModal').classList.add('active');
+            document.getElementById('pin1').value = '';
+            document.getElementById('pin2').value = '';
+            document.getElementById('pin3').value = '';
+            document.getElementById('pin4').value = '';
+            document.getElementById('pinError').classList.remove('show');
+            document.getElementById('pin1').focus();
+        }
+
+        function closePinModal() {
+            document.getElementById('pinModal').classList.remove('active');
+        }
+
+        function handlePinInput(current, nextId) {
+            if (current.value.length === 1 && nextId) {
+                document.getElementById(nextId).focus();
+            }
+            if (!nextId && current.value.length === 1) {
+                verifyPin();
+            }
+        }
+
+        function handlePinKeydown(event, current, prevId) {
+            if (event.key === 'Backspace' && current.value === '' && prevId) {
+                document.getElementById(prevId).focus();
+            }
+        }
+
+        function verifyPin() {
+            const enteredPin = 
+                document.getElementById('pin1').value +
+                document.getElementById('pin2').value +
+                document.getElementById('pin3').value +
+                document.getElementById('pin4').value;
+
+            if (enteredPin === data.pin) {
+                closePinModal();
+                openSettingsModal();
+            } else {
+                document.getElementById('pinError').classList.add('show');
+                document.getElementById('pin1').value = '';
+                document.getElementById('pin2').value = '';
+                document.getElementById('pin3').value = '';
+                document.getElementById('pin4').value = '';
+                document.getElementById('pin1').focus();
+            }
+        }
+
+        function openSettingsModal() {
+            document.getElementById('settingsModal').classList.add('active');
+            document.getElementById('markupMultiplier').value = data.markup;
+            document.getElementById('showPricesInSummary').checked = data.showPricesInSummary;
+            renderCategories();
+            renderProducts();
+        }
+
+        function closeSettingsModal() {
+            document.getElementById('settingsModal').classList.remove('active');
+            renderAllPackageBuilders();
+            if (currentView === 'summary') {
+                renderAllPacksSummary();
+            }
+        }
+
+        function updateMarkup() {
+            const newMarkup = parseFloat(document.getElementById('markupMultiplier').value);
+            if (!isNaN(newMarkup) && newMarkup >= 1) {
+                data.markup = newMarkup;
+                renderProducts();
+            }
+        }
+
+        // Categories
+        function addCategory() {
+            const nameInput = document.getElementById('categoryName');
+            const miscInput = document.getElementById('categoryMisc');
+            const name = nameInput.value.trim();
+            const misc = parseFloat(miscInput.value) || 0;
+
+            if (!name) {
+                alert('Please enter a category name');
+                return;
+            }
+
+            if (data.categories.some(c => c.name.toLowerCase() === name.toLowerCase())) {
+                alert('This category already exists');
+                return;
+            }
+
+            data.categories.push({
+                id: nextCategoryId++,
+                name: name,
+                misc: misc
+            });
+
+            data.categories.sort((a, b) => a.name.localeCompare(b.name));
+
+            nameInput.value = '';
+            miscInput.value = '0';
+            renderCategories();
+            updateCategoryDropdowns();
+        }
+
+        function updateCategoryMisc(categoryId, value) {
+            const category = data.categories.find(c => c.id === categoryId);
+            if (category) {
+                category.misc = parseFloat(value) || 0;
+            }
+        }
+
+        function openEditCategoryModal(categoryId) {
+            const category = data.categories.find(c => c.id === categoryId);
+            if (!category) return;
+
+            document.getElementById('editCategoryName').value = category.name;
+            document.getElementById('editCategoryMisc').value = category.misc || 0;
+            document.getElementById('editCategoryId').value = categoryId;
+            document.getElementById('editCategoryModal').classList.add('active');
+        }
+
+        function closeEditCategoryModal() {
+            document.getElementById('editCategoryModal').classList.remove('active');
+        }
+
+        function saveCategoryEdit() {
+            const categoryId = parseInt(document.getElementById('editCategoryId').value);
+            const name = document.getElementById('editCategoryName').value.trim();
+            const misc = parseFloat(document.getElementById('editCategoryMisc').value) || 0;
+
+            if (!name) {
+                alert('Please enter a category name');
+                return;
+            }
+
+            const existing = data.categories.find(c => c.name.toLowerCase() === name.toLowerCase() && c.id !== categoryId);
+            if (existing) {
+                alert('A category with this name already exists');
+                return;
+            }
+
+            const category = data.categories.find(c => c.id === categoryId);
+            if (category) {
+                category.name = name;
+                category.misc = misc;
+            }
+
+            data.categories.sort((a, b) => a.name.localeCompare(b.name));
+
+            closeEditCategoryModal();
+            renderCategories();
+            renderProducts();
+            updateCategoryDropdowns();
+        }
+
+        function deleteCategory(categoryId) {
+            const productsInCategory = data.products.filter(p => p.categoryId === categoryId);
+            if (productsInCategory.length > 0) {
+                alert('Cannot delete category with products. Remove or reassign products first.');
+                return;
+            }
+
+            if (!confirm('Are you sure you want to delete this category?')) return;
+
+            data.categories = data.categories.filter(c => c.id !== categoryId);
+            renderCategories();
+            updateCategoryDropdowns();
+        }
+
+        function renderCategories() {
+            const list = document.getElementById('categoryList');
+
+            if (data.categories.length === 0) {
+                list.innerHTML = '<p style="color: var(--text-secondary); font-size: 0.9rem;">No categories yet.</p>';
+                return;
+            }
+
+            list.innerHTML = data.categories.map(cat => `
+                <div class="category-tag">
+                    <span class="category-tag-name">${escapeHtml(cat.name)}</span>
+                    <div class="category-tag-misc">
+                        <span>Misc £</span>
+                        <input type="number" value="${cat.misc || 0}" step="0.01" min="0" 
+                               onchange="updateCategoryMisc(${cat.id}, this.value)">
+                    </div>
+                    <button class="category-tag-btn edit" onclick="openEditCategoryModal(${cat.id})" title="Edit">✏️</button>
+                    <button class="category-tag-btn delete" onclick="deleteCategory(${cat.id})" title="Delete">✕</button>
+                </div>
+            `).join('');
+        }
+
+        function updateCategoryDropdowns() {
+            const addSelect = document.getElementById('productCategory');
+            const editSelect = document.getElementById('editProductCategory');
+
+            const options = '<option value="">Category</option>' + 
+                data.categories.map(cat => `<option value="${cat.id}">${escapeHtml(cat.name)}</option>`).join('');
+
+            addSelect.innerHTML = options;
+            editSelect.innerHTML = options;
+        }
+
+        // Products
+        function addProduct() {
+            const nameInput = document.getElementById('productName');
+            const categorySelect = document.getElementById('productCategory');
+            const costInput = document.getElementById('productCost');
+            const miscInput = document.getElementById('productMisc');
+            const sortInput = document.getElementById('productSort');
+            
+            const name = nameInput.value.trim();
+            const categoryId = parseInt(categorySelect.value);
+            const cost = parseFloat(costInput.value);
+            const misc = parseFloat(miscInput.value) || 0;
+            const sortOrder = parseInt(sortInput.value) || 10;
+
+            if (!name) {
+                alert('Please enter a product name');
+                return;
+            }
+            if (!categoryId) {
+                alert('Please select a category');
+                return;
+            }
+            if (isNaN(cost) || cost < 0) {
+                alert('Please enter a valid cost');
+                return;
+            }
+
+            data.products.push({
+                id: nextProductId++,
+                name: name,
+                categoryId: categoryId,
+                cost: cost,
+                misc: misc,
+                sortOrder: sortOrder
+            });
+
+            nameInput.value = '';
+            categorySelect.value = '';
+            costInput.value = '';
+            miscInput.value = '0';
+            sortInput.value = '10';
+            nameInput.focus();
+
+            renderProducts();
+        }
+
+        function renderProducts() {
+            const list = document.getElementById('productList');
+
+            if (data.products.length === 0) {
+                list.innerHTML = `
+                    <div class="empty-state" style="padding: 20px;">
+                        <p>No products yet. Add categories first, then add products.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            const sortedProducts = [...data.products].sort((a, b) => {
+                const catA = data.categories.find(c => c.id === a.categoryId)?.name || '';
+                const catB = data.categories.find(c => c.id === b.categoryId)?.name || '';
+                if (catA !== catB) return catA.localeCompare(catB);
+                if (a.sortOrder !== b.sortOrder) return a.sortOrder - b.sortOrder;
+                return a.name.localeCompare(b.name);
+            });
+
+            list.innerHTML = sortedProducts.map(product => {
+                const category = data.categories.find(c => c.id === product.categoryId);
+                const sellPrice = calculateSellingPrice(product.cost, product.misc);
+                return `
+                    <div class="product-item-settings">
+                        <span class="product-name">${escapeHtml(product.name)}</span>
+                        <span class="product-category">${category ? escapeHtml(category.name) : '—'}</span>
+                        <span class="product-sort">${product.sortOrder || 0}</span>
+                        <span class="product-cost">£${product.cost.toFixed(2)}</span>
+                        <span class="product-misc">£${product.misc.toFixed(2)}</span>
+                        <span class="product-sell">£${sellPrice.toFixed(2)}</span>
+                        <div class="product-actions">
+                            <button class="btn-icon btn-edit" onclick="openEditProductModal(${product.id})" title="Edit">✏️</button>
+                            <button class="btn-icon btn-delete" onclick="deleteProduct(${product.id})" title="Delete">🗑️</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function openEditProductModal(productId) {
+            const product = data.products.find(p => p.id === productId);
+            if (!product) return;
+
+            updateCategoryDropdowns();
+            document.getElementById('editProductName').value = product.name;
+            document.getElementById('editProductCategory').value = product.categoryId;
+            document.getElementById('editProductCost').value = product.cost;
+            document.getElementById('editProductMisc').value = product.misc;
+            document.getElementById('editProductSort').value = product.sortOrder || 0;
+            document.getElementById('editProductId').value = productId;
+            document.getElementById('editProductModal').classList.add('active');
+        }
+
+        function closeEditProductModal() {
+            document.getElementById('editProductModal').classList.remove('active');
+        }
+
+        function saveProductEdit() {
+            const productId = parseInt(document.getElementById('editProductId').value);
+            const name = document.getElementById('editProductName').value.trim();
+            const categoryId = parseInt(document.getElementById('editProductCategory').value);
+            const cost = parseFloat(document.getElementById('editProductCost').value);
+            const misc = parseFloat(document.getElementById('editProductMisc').value) || 0;
+            const sortOrder = parseInt(document.getElementById('editProductSort').value) || 0;
+
+            if (!name) {
+                alert('Please enter a product name');
+                return;
+            }
+            if (!categoryId) {
+                alert('Please select a category');
+                return;
+            }
+            if (isNaN(cost) || cost < 0) {
+                alert('Please enter a valid cost');
+                return;
+            }
+
+            const product = data.products.find(p => p.id === productId);
+            if (product) {
+                product.name = name;
+                product.categoryId = categoryId;
+                product.cost = cost;
+                product.misc = misc;
+                product.sortOrder = sortOrder;
+            }
+
+            closeEditProductModal();
+            renderProducts();
+        }
+
+        function deleteProduct(productId) {
+            if (!confirm('Are you sure you want to delete this product?')) return;
+
+            data.products = data.products.filter(p => p.id !== productId);
+            
+            data.packages.forEach(pkg => {
+                delete pkg.items[productId];
+            });
+
+            renderProducts();
+        }
+
+        // Packages
+        function addPackage() {
+            const packageNum = data.packages.length + 1;
+            const letter = String.fromCharCode(64 + packageNum);
+            
+            const newPackage = {
+                id: nextPackageId++,
+                name: `Pack ${letter}`,
+                items: {},
+                misc: 0
+            };
+
+            data.packages.push(newPackage);
+            activePackageId = newPackage.id;
+            
+            renderPackages();
+        }
+
+        function movePackage(packageId, direction) {
+            const index = data.packages.findIndex(p => p.id === packageId);
+            if (index === -1) return;
+            
+            const newIndex = index + direction;
+            if (newIndex < 0 || newIndex >= data.packages.length) return;
+
+            [data.packages[index], data.packages[newIndex]] = [data.packages[newIndex], data.packages[index]];
+
+            data.packages.forEach((pkg, i) => {
+                const letter = String.fromCharCode(65 + i);
+                pkg.name = `Pack ${letter}`;
+            });
+
+            renderPackages();
+        }
+
+        function deletePackage(packageId) {
+            if (!confirm('Are you sure you want to delete this package?')) return;
+
+            data.packages = data.packages.filter(p => p.id !== packageId);
+            
+            if (activePackageId === packageId) {
+                activePackageId = data.packages.length > 0 ? data.packages[0].id : null;
+            }
+
+            data.packages.forEach((pkg, index) => {
+                const letter = String.fromCharCode(65 + index);
+                pkg.name = `Pack ${letter}`;
+            });
+
+            renderPackages();
+        }
+
+        function updatePackageMisc(packageId, value) {
+            const pkg = data.packages.find(p => p.id === packageId);
+            if (pkg) {
+                pkg.misc = parseFloat(value) || 0;
+                renderAllPackageBuilders();
+            }
+        }
+
+        function renderPackages() {
+            renderPackageTabs();
+            renderAllPackageBuilders();
+        }
+
+        function renderPackageTabs() {
+            const tabsContainer = document.getElementById('packageTabs');
+            
+            if (data.packages.length === 0) {
+                tabsContainer.innerHTML = '';
+                return;
+            }
+
+            tabsContainer.innerHTML = data.packages.map((pkg, index) => `
+                <div class="tab ${pkg.id === activePackageId ? 'active' : ''}">
+                    <button class="pack-reorder-btn" onclick="movePackage(${pkg.id}, -1)" title="Move left" ${index === 0 ? 'disabled' : ''}>◀</button>
+                    <span class="tab-name" onclick="selectPackage(${pkg.id})">${escapeHtml(pkg.name)}</span>
+                    <button class="pack-reorder-btn" onclick="movePackage(${pkg.id}, 1)" title="Move right" ${index === data.packages.length - 1 ? 'disabled' : ''}>▶</button>
+                    <button class="tab-close" onclick="deletePackage(${pkg.id})" title="Delete pack">✕</button>
+                </div>
+            `).join('');
+        }
+
+        function selectPackage(packageId) {
+            activePackageId = packageId;
+            renderPackages();
+        }
+
+        function toggleCategory(categoryId) {
+            expandedCategories[categoryId] = !expandedCategories[categoryId];
+            renderAllPackageBuilders();
+        }
+
+        function renderAllPackageBuilders() {
+            const container = document.getElementById('packageBuilders');
+
+            if (data.packages.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📋</div>
+                        <p>No packages yet.<br>Click "New Pack" to create one.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = data.packages.map(pkg => `
+                <div class="package-builder ${pkg.id === activePackageId ? 'active' : ''}" data-package-id="${pkg.id}">
+                    ${renderPackageBuilder(pkg)}
+                </div>
+            `).join('');
+        }
+
+        function renderPackageBuilder(pkg) {
+            if (data.products.length === 0) {
+                return `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📦</div>
+                        <p>Add some products in Settings first to start building your package.</p>
+                    </div>
+                `;
+            }
+
+            // Group products by category
+            const productsByCategory = {};
+            data.categories.forEach(cat => {
+                const products = data.products
+                    .filter(p => p.categoryId === cat.id)
+                    .sort((a, b) => {
+                        if (a.sortOrder !== b.sortOrder) return a.sortOrder - b.sortOrder;
+                        return a.name.localeCompare(b.name);
+                    });
+                if (products.length > 0) {
+                    productsByCategory[cat.id] = {
+                        category: cat,
+                        products: products
+                    };
+                }
+            });
+
+            const categoriesHtml = Object.values(productsByCategory).map(group => {
+                const isExpanded = expandedCategories[group.category.id] !== false;
+                const itemCount = group.products.reduce((sum, p) => sum + (pkg.items[p.id] || 0), 0);
+                
+                const productsHtml = group.products.map(product => {
+                    const quantity = pkg.items[product.id] || 0;
+                    const sellPrice = calculateSellingPrice(product.cost, product.misc);
+                    const lineTotal = quantity * sellPrice;
+                    
+                    return `
+                        <div class="product-row">
+                            <div class="product-row-top">
+                                <div class="product-row-info">
+                                    <div class="product-row-name">${escapeHtml(product.name)}</div>
+                                    <div class="product-row-price">£${sellPrice.toFixed(2)} each</div>
+                                </div>
+                                <div class="product-row-total">${quantity > 0 ? '£' + lineTotal.toFixed(2) : '—'}</div>
+                            </div>
+                            <div class="product-row-bottom">
+                                <div class="product-row-controls">
+                                    <button onclick="updateQuantity(${pkg.id}, ${product.id}, -1)">−</button>
+                                    <input type="number" value="${quantity}" min="0" 
+                                           onchange="setQuantity(${pkg.id}, ${product.id}, this.value)">
+                                    <button onclick="updateQuantity(${pkg.id}, ${product.id}, 1)">+</button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+                const categoryMiscDisplay = group.category.misc ? `<span class="category-misc-badge">(+£${group.category.misc.toFixed(2)} fee)</span>` : '';
+
+                return `
+                    <div class="category-group ${isExpanded ? '' : 'collapsed'}">
+                        <div class="category-header" onclick="toggleCategory(${group.category.id})">
+                            <div class="category-header-left">
+                                <span class="category-toggle">▼</span>
+                                <span class="category-name">${escapeHtml(group.category.name)}</span>
+                                ${categoryMiscDisplay}
+                            </div>
+                            <span class="category-count">${itemCount > 0 ? itemCount + ' selected' : group.products.length + ' items'}</span>
+                        </div>
+                        <div class="category-items">
+                            ${productsHtml}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            // Package misc input
+            const packageMiscHtml = `
+                <div class="package-misc-row">
+                    <label>Package misc cost:</label>
+                    <input type="number" value="${pkg.misc || 0}" step="0.01" min="0" 
+                           onchange="updatePackageMisc(${pkg.id}, this.value)">
+                    <span style="color: var(--text-secondary); font-size: 0.85rem;">£</span>
+                </div>
+            `;
+
+            // Calculate summary with totals
+            const totals = calculatePackageTotal(pkg);
+            const summaryItems = [];
+            
+            data.products.forEach(product => {
+                const quantity = pkg.items[product.id] || 0;
+                if (quantity > 0) {
+                    const sellPrice = calculateSellingPrice(product.cost, product.misc);
+                    const lineTotal = quantity * sellPrice;
+                    summaryItems.push({
+                        name: product.name,
+                        quantity: quantity,
+                        total: lineTotal
+                    });
+                }
+            });
+
+            // Build category misc items for display
+            const categoryMiscItems = [];
+            totals.categoriesUsed.forEach(catId => {
+                const category = data.categories.find(c => c.id === catId);
+                if (category && category.misc) {
+                    categoryMiscItems.push({
+                        name: `${category.name} fee`,
+                        total: category.misc
+                    });
+                }
+            });
+
+            const summaryHtml = summaryItems.length > 0 ? `
+                <div class="package-summary">
+                    <div class="summary-title">${escapeHtml(pkg.name)} Summary</div>
+                    <div class="summary-items">
+                        ${summaryItems.map(item => `
+                            <div class="summary-item">
+                                <span>${item.quantity}× ${escapeHtml(item.name)}</span>
+                                <span>£${item.total.toFixed(2)}</span>
+                            </div>
+                        `).join('')}
+                        ${categoryMiscItems.map(item => `
+                            <div class="summary-item misc-item">
+                                <span>${escapeHtml(item.name)}</span>
+                                <span>£${item.total.toFixed(2)}</span>
+                            </div>
+                        `).join('')}
+                        ${pkg.misc ? `
+                            <div class="summary-item misc-item">
+                                <span>Package fee</span>
+                                <span>£${pkg.misc.toFixed(2)}</span>
+                            </div>
+                        ` : ''}
+                    </div>
+                    <div class="summary-divider"></div>
+                    <div class="summary-total">
+                        <span>Package Price</span>
+                        <span>£${totals.grandTotal.toFixed(2)}</span>
+                    </div>
+                </div>
+            ` : `
+                <div class="package-summary">
+                    <div class="summary-title">${escapeHtml(pkg.name)} Summary</div>
+                    <p style="opacity: 0.7; font-size: 0.9rem;">No items added yet. Expand categories above and add products.</p>
+                </div>
+            `;
+
+            return `
+                ${categoriesHtml}
+                ${packageMiscHtml}
+                ${summaryHtml}
+            `;
+        }
+
+        function updateQuantity(packageId, productId, delta) {
+            const pkg = data.packages.find(p => p.id === packageId);
+            if (!pkg) return;
+
+            const currentQty = pkg.items[productId] || 0;
+            const newQty = Math.max(0, currentQty + delta);
+            
+            if (newQty === 0) {
+                delete pkg.items[productId];
+            } else {
+                pkg.items[productId] = newQty;
+            }
+
+            renderAllPackageBuilders();
+        }
+
+        function setQuantity(packageId, productId, value) {
+            const pkg = data.packages.find(p => p.id === packageId);
+            if (!pkg) return;
+
+            const newQty = Math.max(0, parseInt(value) || 0);
+            
+            if (newQty === 0) {
+                delete pkg.items[productId];
+            } else {
+                pkg.items[productId] = newQty;
+            }
+
+            renderAllPackageBuilders();
+        }
+
+        // Export/Import
+        function exportData() {
+            const filename = document.getElementById('exportFilename').value.trim() || 'package-pricing';
+            const now = new Date();
+            const timestamp = now.toISOString().replace(/[:.]/g, '-').slice(0, 19);
+            
+            const exportObj = {
+                categories: data.categories,
+                products: data.products,
+                packages: data.packages,
+                markup: data.markup,
+                pin: data.pin,
+                showPricesInSummary: data.showPricesInSummary,
+                nextProductId: nextProductId,
+                nextPackageId: nextPackageId,
+                nextCategoryId: nextCategoryId,
+                exportDate: now.toISOString()
+            };
+
+            const blob = new Blob([JSON.stringify(exportObj, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${filename}-${timestamp}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        function importData(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const importObj = JSON.parse(e.target.result);
+                    
+                    if (!importObj.products || !importObj.packages) {
+                        throw new Error('Invalid file format');
+                    }
+
+                    data.categories = (importObj.categories || []).map(c => ({
+                        ...c,
+                        misc: c.misc || 0
+                    }));
+                    data.products = importObj.products.map(p => ({
+                        ...p,
+                        sortOrder: p.sortOrder || 0
+                    }));
+                    data.packages = importObj.packages.map(p => ({
+                        ...p,
+                        misc: p.misc || 0
+                    }));
+                    data.markup = importObj.markup || 1.5;
+                    data.pin = importObj.pin || '3786';
+                    data.showPricesInSummary = importObj.showPricesInSummary !== false;
+                    nextProductId = importObj.nextProductId || Math.max(...data.products.map(p => p.id), 0) + 1;
+                    nextPackageId = importObj.nextPackageId || Math.max(...data.packages.map(p => p.id), 0) + 1;
+                    nextCategoryId = importObj.nextCategoryId || Math.max(...data.categories.map(c => c.id), 0) + 1;
+                    
+                    activePackageId = data.packages.length > 0 ? data.packages[0].id : null;
+
+                    document.getElementById('markupMultiplier').value = data.markup;
+                    document.getElementById('showPricesInSummary').checked = data.showPricesInSummary;
+                    updateCategoryDropdowns();
+                    renderCategories();
+                    renderProducts();
+                    renderPackages();
+                    
+                    if (currentView === 'summary') {
+                        renderAllPacksSummary();
+                    }
+                    
+                    alert('Data imported successfully!');
+                } catch (err) {
+                    alert('Error importing file. Please make sure it\'s a valid export file.');
+                    console.error(err);
+                }
+            };
+            reader.readAsText(file);
+            
+            event.target.value = '';
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        document.getElementById('pinModal').addEventListener('click', function(e) {
+            if (e.target === this) closePinModal();
+        });
+        document.getElementById('settingsModal').addEventListener('click', function(e) {
+            if (e.target === this) closeSettingsModal();
+        });
+        document.getElementById('editProductModal').addEventListener('click', function(e) {
+            if (e.target === this) closeEditProductModal();
+        });
+        document.getElementById('editCategoryModal').addEventListener('click', function(e) {
+            if (e.target === this) closeEditCategoryModal();
+        });
+
+        document.getElementById('categoryName').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') addCategory();
+        });
+        document.getElementById('productName').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') addProduct();
+        });
+
+        init();
+    </script>
+</body>
+</html>
