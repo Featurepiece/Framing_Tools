@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Material Calculator</title>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=Playfair+Display:wght@500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #f8f6f3;
+            --bg-secondary: #ffffff;
+            --text-primary: #2c3e50;
+            --text-secondary: #6b7c8a;
+            --text-light: #ffffff;
+            --accent: #c9a87c;
+            --accent-hover: #b8956a;
+            --border: #e8e4df;
+            --shadow: rgba(44, 62, 80, 0.08);
+            --success: #27ae60;
+            --warning: #e67e22;
+            --danger: #c0392b;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'DM Sans', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            padding: 24px;
+            line-height: 1.5;
+        }
+
+        .container { max-width: 1100px; margin: 0 auto; }
+
+        .card {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 2px 12px var(--shadow);
+        }
+
+        .header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .header svg { color: var(--accent); }
+
+        h1 {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.75rem;
+            font-weight: 500;
+        }
+
+        h2 {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.1rem;
+            font-weight: 500;
+            margin-bottom: 14px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        h3 {
+            font-size: 0.9rem;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+
+        .settings-bar {
+            background: var(--bg-primary);
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 20px;
+            display: flex;
+            gap: 24px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .setting-group label {
+            display: block;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+
+        .toggle-buttons {
+            display: flex;
+            gap: 8px;
+        }
+
+        .toggle-btn {
+            padding: 8px 20px;
+            border: 1px solid var(--border);
+            background: var(--bg-secondary);
+            border-radius: 6px;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .toggle-btn:hover { background: var(--border); }
+        .toggle-btn.active { background: var(--accent); color: var(--text-light); border-color: var(--accent); }
+
+        .switch-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .switch {
+            width: 52px;
+            height: 28px;
+            background: #ccc;
+            border-radius: 14px;
+            position: relative;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .switch.active { background: var(--accent); }
+
+        .switch-knob {
+            width: 22px;
+            height: 22px;
+            background: white;
+            border-radius: 50%;
+            position: absolute;
+            top: 3px;
+            left: 3px;
+            transition: transform 0.2s;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+        }
+
+        .switch.active .switch-knob { transform: translateX(24px); }
+
+        .switch-label { font-size: 0.85rem; color: var(--text-secondary); }
+
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        @media (max-width: 800px) {
+            .main-grid { grid-template-columns: 1fr; }
+        }
+
+        .panel {
+            background: var(--bg-primary);
+            border-radius: 8px;
+            padding: 16px;
+        }
+
+        .panel-accent {
+            border-left: 4px solid var(--accent);
+        }
+
+        .input-row {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .input-group { flex: 1; }
+
+        .input-group label {
+            display: block;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-bottom: 4px;
+            font-weight: 500;
+        }
+
+        .input-group input {
+            width: 100%;
+            padding: 8px 10px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.95rem;
+        }
+
+        .input-group input:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .board-section {
+            background: var(--bg-secondary);
+            border-radius: 6px;
+            padding: 12px;
+            margin-top: 12px;
+            border: 1px solid var(--border);
+        }
+
+        .results-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .result-card {
+            background: var(--bg-secondary);
+            border-radius: 8px;
+            padding: 12px;
+            border: 1px solid var(--border);
+        }
+
+        .result-card.success { background: #e8f5e9; border-color: #a5d6a7; }
+        .result-card.warning { background: #fff3e0; border-color: #ffcc80; }
+        .result-card.info { background: #f3e5f5; border-color: #ce93d8; }
+
+        .result-label {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-bottom: 2px;
+        }
+
+        .result-card.success .result-label { color: #2e7d32; }
+        .result-card.warning .result-label { color: #e65100; }
+        .result-card.info .result-label { color: #7b1fa2; }
+
+        .result-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--accent);
+        }
+
+        .result-card.success .result-value { color: #2e7d32; }
+        .result-card.warning .result-value { color: #e65100; }
+        .result-card.info .result-value { color: #7b1fa2; }
+
+        .result-note {
+            font-size: 0.7rem;
+            color: #e65100;
+            margin-top: 2px;
+        }
+
+        .empty-state {
+            color: var(--text-secondary);
+            font-style: italic;
+            padding: 20px 0;
+        }
+
+        .preview-section { text-align: center; }
+
+        .preview-title {
+            font-size: 0.9rem;
+            font-weight: 600;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .preview-badge {
+            background: var(--accent);
+            color: white;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 0.75rem;
+        }
+
+        .preview-svg {
+            border: 2px solid var(--border);
+            background: white;
+            border-radius: 8px;
+            width: 100%;
+            max-height: 300px;
+        }
+
+        .preview-count {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            margin-top: 6px;
+        }
+
+        .space-y > * + * { margin-top: 16px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <div class="header">
+                <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="6" cy="6" r="3"/><path d="M8.12 8.12 12 12"/><path d="M20 4 8.12 15.88"/><circle cx="6" cy="18" r="3"/><path d="M14.8 14.8 20 20"/>
+                </svg>
+                <h1>Material Calculator</h1>
+            </div>
+
+            <div class="settings-bar">
+                <div class="setting-group">
+                    <label>Measurement Unit</label>
+                    <div class="toggle-buttons">
+                        <button class="toggle-btn active" id="btn-inches" onclick="setUnit('inches')">Inches</button>
+                        <button class="toggle-btn" id="btn-mm" onclick="setUnit('mm')">Millimetres</button>
+                    </div>
+                </div>
+                <div class="setting-group">
+                    <label>Allow Rotation</label>
+                    <div class="switch-container">
+                        <div class="switch active" id="rotation-switch" onclick="toggleRotation()">
+                            <div class="switch-knob"></div>
+                        </div>
+                        <span class="switch-label" id="rotation-label">Enabled</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="main-grid">
+                <div class="space-y">
+                    <div class="panel">
+                        <h2>Mount Specifications</h2>
+                        <div class="input-row">
+                            <div class="input-group">
+                                <label>Width (<span class="unit-label">inches</span>)</label>
+                                <input type="number" id="mount-width" value="10" step="0.1" oninput="calculate()">
+                            </div>
+                            <div class="input-group">
+                                <label>Height (<span class="unit-label">inches</span>)</label>
+                                <input type="number" id="mount-height" value="8" step="0.1" oninput="calculate()">
+                            </div>
+                        </div>
+                        <div class="input-row">
+                            <div class="input-group">
+                                <label>Quantity</label>
+                                <input type="number" id="quantity" value="" step="1" oninput="calculate()">
+                            </div>
+                            <div class="input-group">
+                                <label>Margin (mm)</label>
+                                <input type="number" id="edge-margin" value="17" step="1" oninput="calculate()">
+                            </div>
+                            <div class="input-group">
+                                <label>Gap (mm)</label>
+                                <input type="number" id="gap-between" value="10" step="0.5" oninput="calculate()">
+                            </div>
+                        </div>
+
+                        <div class="board-section">
+                            <h3>Board</h3>
+                            <div class="input-row">
+                                <div class="input-group">
+                                    <label>Width (mm)</label>
+                                    <input type="number" id="board-width" value="1200" oninput="calculate()">
+                                </div>
+                                <div class="input-group">
+                                    <label>Height (mm)</label>
+                                    <input type="number" id="board-height" value="800" oninput="calculate()">
+                                </div>
+                                <div class="input-group">
+                                    <label>Cost (£) <span style="color:#aaa;font-weight:normal">optional</span></label>
+                                    <input type="number" id="board-cost" value="" step="0.01" placeholder="0.00" oninput="calculate()">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="panel panel-accent">
+                        <h2>Results</h2>
+                        <div id="results-container">
+                            <p class="empty-state">Enter specifications</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="panel">
+                    <h2>Preview</h2>
+                    <div id="preview-container">
+                        <p class="empty-state">Enter specifications to see preview</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentUnit = 'inches';
+        let allowRotation = true;
+        const INCH_TO_MM = 25.4;
+
+        function setUnit(unit) {
+            currentUnit = unit;
+            document.getElementById('btn-inches').classList.toggle('active', unit === 'inches');
+            document.getElementById('btn-mm').classList.toggle('active', unit === 'mm');
+            document.querySelectorAll('.unit-label').forEach(el => el.textContent = unit);
+            calculate();
+        }
+
+        function toggleRotation() {
+            allowRotation = !allowRotation;
+            const sw = document.getElementById('rotation-switch');
+            sw.classList.toggle('active', allowRotation);
+            document.getElementById('rotation-label').textContent = allowRotation ? 'Enabled' : 'Disabled';
+            calculate();
+        }
+
+        function calculate() {
+            const w = parseFloat(document.getElementById('mount-width').value) || 0;
+            const h = parseFloat(document.getElementById('mount-height').value) || 0;
+            const qty = parseInt(document.getElementById('quantity').value) || 0;
+            const margin = parseFloat(document.getElementById('edge-margin').value) || 0;
+            const gap = parseFloat(document.getElementById('gap-between').value) || 0;
+            const bw = parseFloat(document.getElementById('board-width').value) || 0;
+            const bh = parseFloat(document.getElementById('board-height').value) || 0;
+            const boardCost = parseFloat(document.getElementById('board-cost').value) || 0;
+
+            const resultsContainer = document.getElementById('results-container');
+            const previewContainer = document.getElementById('preview-container');
+
+            if (w <= 0 || h <= 0 || qty <= 0 || bw <= 0 || bh <= 0) {
+                resultsContainer.innerHTML = '<p class="empty-state">Enter specifications</p>';
+                previewContainer.innerHTML = '<p class="empty-state">Enter specifications to see preview</p>';
+                return;
+            }
+
+            const mw = currentUnit === 'inches' ? w * INCH_TO_MM : w;
+            const mh = currentUnit === 'inches' ? h * INCH_TO_MM : h;
+            const uw = bw - 2 * margin;
+            const uh = bh - 2 * margin;
+
+            if (uw <= 0 || uh <= 0) {
+                resultsContainer.innerHTML = '<p class="empty-state">Margins too large for board</p>';
+                previewContainer.innerHTML = '<p class="empty-state">Adjust margins</p>';
+                return;
+            }
+
+            const layouts = [];
+
+            // Normal orientation
+            const nAcross = Math.floor((uw + gap) / (mw + gap));
+            const nDown = Math.floor((uh + gap) / (mh + gap));
+            const nLayout = [];
+            for (let r = 0; r < nDown; r++) {
+                for (let c = 0; c < nAcross; c++) {
+                    nLayout.push({ x: margin + c * (mw + gap), y: margin + r * (mh + gap), width: mw, height: mh, rotated: false });
+                }
+            }
+            layouts.push({ layout: nLayout, perBoard: nLayout.length });
+
+            // Rotated orientation
+            const rAcross = Math.floor((uw + gap) / (mh + gap));
+            const rDown = Math.floor((uh + gap) / (mw + gap));
+            const rLayout = [];
+            for (let r = 0; r < rDown; r++) {
+                for (let c = 0; c < rAcross; c++) {
+                    rLayout.push({ x: margin + c * (mh + gap), y: margin + r * (mw + gap), width: mh, height: mw, rotated: true });
+                }
+            }
+            layouts.push({ layout: rLayout, perBoard: rLayout.length });
+
+            // Mixed layouts if rotation allowed
+            if (allowRotation) {
+                // Mixed 1: Normal primary
+                const mix1Layout = [], mix1Used = [];
+                const mix1Overlaps = (x, y, w, h) => mix1Used.some(r => !(x + w + gap <= r.x || x >= r.x + r.width + gap || y + h + gap <= r.y || y >= r.y + r.height + gap));
+                const mix1TryAdd = (x, y, w, h, rot) => {
+                    if (x >= margin && y >= margin && x + w <= bw - margin && y + h <= bh - margin && !mix1Overlaps(x, y, w, h)) {
+                        const p = { x, y, width: w, height: h, rotated: rot };
+                        mix1Layout.push(p); mix1Used.push(p);
+                        return true;
+                    }
+                    return false;
+                };
+                for (let r = 0; r < nDown; r++) for (let c = 0; c < nAcross; c++) mix1TryAdd(margin + c * (mw + gap), margin + r * (mh + gap), mw, mh, false);
+                const scanStep = Math.min(10, Math.max(1, gap));
+                for (let y = margin; y <= bh - margin - mw; y += scanStep) for (let x = margin; x <= bw - margin - mh; x += scanStep) mix1TryAdd(x, y, mh, mw, true);
+                layouts.push({ layout: mix1Layout, perBoard: mix1Layout.length });
+
+                // Mixed 2: Rotated primary
+                const mix2Layout = [], mix2Used = [];
+                const mix2Overlaps = (x, y, w, h) => mix2Used.some(r => !(x + w + gap <= r.x || x >= r.x + r.width + gap || y + h + gap <= r.y || y >= r.y + r.height + gap));
+                const mix2TryAdd = (x, y, w, h, rot) => {
+                    if (x >= margin && y >= margin && x + w <= bw - margin && y + h <= bh - margin && !mix2Overlaps(x, y, w, h)) {
+                        const p = { x, y, width: w, height: h, rotated: rot };
+                        mix2Layout.push(p); mix2Used.push(p);
+                        return true;
+                    }
+                    return false;
+                };
+                for (let r = 0; r < rDown; r++) for (let c = 0; c < rAcross; c++) mix2TryAdd(margin + c * (mh + gap), margin + r * (mw + gap), mh, mw, true);
+                for (let y = margin; y <= bh - margin - mh; y += scanStep) for (let x = margin; x <= bw - margin - mw; x += scanStep) mix2TryAdd(x, y, mw, mh, false);
+                layouts.push({ layout: mix2Layout, perBoard: mix2Layout.length });
+            }
+
+            const best = allowRotation ? layouts.reduce((a, b) => a.perBoard > b.perBoard ? a : b) : layouts[0];
+
+            if (best.perBoard <= 0) {
+                resultsContainer.innerHTML = '<p class="empty-state">Pieces too large for board</p>';
+                previewContainer.innerHTML = '<p class="empty-state">Adjust dimensions</p>';
+                return;
+            }
+
+            const boardsNeeded = Math.ceil(qty / best.perBoard);
+            const fullBoards = Math.floor(qty / best.perBoard);
+            const remainingPieces = qty % best.perBoard;
+            const totalBoardArea = boardsNeeded * bw * bh;
+            const actualMountArea = qty * mw * mh;
+            const util = ((actualMountArea / totalBoardArea) * 100).toFixed(1);
+            const waste = (100 - parseFloat(util)).toFixed(1);
+            const costPerPiece = boardCost > 0 ? (boardCost / best.perBoard).toFixed(2) : null;
+
+            // Render results
+            let resultsHtml = '<div class="results-grid">';
+            resultsHtml += `<div class="result-card"><div class="result-label">Boards Required</div><div class="result-value">${boardsNeeded}</div></div>`;
+            resultsHtml += `<div class="result-card success"><div class="result-label">Utilisation</div><div class="result-value">${util}%</div></div>`;
+            resultsHtml += `<div class="result-card warning"><div class="result-label">Waste</div><div class="result-value">${waste}%</div><div class="result-note">Includes margins, gaps & offcuts</div></div>`;
+            if (costPerPiece) resultsHtml += `<div class="result-card info"><div class="result-label">Cost per Piece</div><div class="result-value">£${costPerPiece}</div></div>`;
+            resultsHtml += '</div>';
+            resultsContainer.innerHTML = resultsHtml;
+
+            // Render preview
+            let previewHtml = '<div class="space-y">';
+            
+            if (fullBoards > 0) {
+                previewHtml += `<div class="preview-section">
+                    <div class="preview-title">Full Board ${fullBoards > 1 ? `<span class="preview-badge">×${fullBoards}</span>` : ''}</div>
+                    <svg class="preview-svg" viewBox="0 0 ${bw} ${bh}">
+                        <rect x="0" y="0" width="${bw}" height="${bh}" fill="#fafafa" stroke="#2c3e50" stroke-width="3"/>
+                        ${margin > 0 ? `<rect x="${margin}" y="${margin}" width="${bw - 2 * margin}" height="${bh - 2 * margin}" fill="none" stroke="#c0392b" stroke-dasharray="5,5"/>` : ''}
+                        ${best.layout.map(p => `<rect x="${p.x + 1}" y="${p.y + 1}" width="${p.width - 2}" height="${p.height - 2}" fill="${p.rotated ? '#fef3c7' : 'rgba(201,168,124,0.3)'}" stroke="${p.rotated ? '#f59e0b' : '#c9a87c'}" stroke-width="2"/>`).join('')}
+                    </svg>
+                    <div class="preview-count">${best.perBoard} pieces</div>
+                </div>`;
+            }
+
+            if (remainingPieces > 0) {
+                previewHtml += `<div class="preview-section">
+                    <div class="preview-title">${fullBoards > 0 ? 'Partial' : ''} Board (${remainingPieces} of ${best.perBoard} pieces)</div>
+                    <svg class="preview-svg" viewBox="0 0 ${bw} ${bh}">
+                        <rect x="0" y="0" width="${bw}" height="${bh}" fill="#fafafa" stroke="#2c3e50" stroke-width="3"/>
+                        ${margin > 0 ? `<rect x="${margin}" y="${margin}" width="${bw - 2 * margin}" height="${bh - 2 * margin}" fill="none" stroke="#c0392b" stroke-dasharray="5,5"/>` : ''}
+                        ${best.layout.slice(0, remainingPieces).map(p => `<rect x="${p.x + 1}" y="${p.y + 1}" width="${p.width - 2}" height="${p.height - 2}" fill="${p.rotated ? '#fef3c7' : 'rgba(201,168,124,0.3)'}" stroke="${p.rotated ? '#f59e0b' : '#c9a87c'}" stroke-width="2"/>`).join('')}
+                    </svg>
+                    <div class="preview-count">${remainingPieces} pieces</div>
+                </div>`;
+            }
+
+            previewHtml += '</div>';
+            previewContainer.innerHTML = previewHtml;
+        }
+
+        calculate();
+    </script>
+</body>
+</html>
