@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Conn & Flynn</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    background:#0a0a1a;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    min-height:100vh; font-family:'Press Start 2P',monospace;
+    overflow:hidden; touch-action:none;
+  }
+  #gameWrapper { display:flex; flex-direction:column; align-items:center; }
+  canvas {
+    display:block; image-rendering:pixelated;
+    border:3px solid #ff6b00;
+    box-shadow:0 0 40px #ff6b0066,0 0 80px #ff3d0033;
+  }
+  #ui {
+    width:100%; display:flex; justify-content:space-between; align-items:center;
+    padding:8px 12px; background:#0d0d20;
+    border:3px solid #ff6b00; border-top:none; color:#ff6b00; font-size:10px;
+  }
+  #ui span { color:#fff; }
+  /* Controls sit BELOW the game, never overlap it */
+  #controls {
+    display: none;          /* shown only on touch devices via JS */
+    width: 100%;
+    max-width: 520px;
+    height: 150px;
+    position: relative;
+    background: #0a0a1a;
+    flex-shrink: 0;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: none;
+  }
+  /* D-pad on the left */
+  #dpad {
+    position: absolute;
+    left: 16px;
+    top: 10px;
+    width: 156px;
+    height: 130px;
+  }
+  .cb {
+    position: absolute;
+    width: 50px; height: 50px;
+    background: rgba(255,107,0,0.2);
+    border: 2px solid rgba(255,107,0,0.55);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px; color: rgba(255,107,0,0.8);
+    touch-action: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .cb.active { background: rgba(255,107,0,0.55); color: #fff; }
+  #cb-up    { left: 53px; top: 0;    }
+  #cb-left  { left: 0;    top: 52px; }
+  #cb-right { left: 106px;top: 52px; }
+  #cb-down  { left: 53px; top: 104px;}
+  /* Jump on the right */
+  #cb-jump {
+    position: absolute;
+    right: 20px; top: 18px;
+    width: 80px; height: 80px;
+    border-radius: 50%;
+    background: rgba(255,50,0,0.2);
+    border: 2px solid rgba(255,80,0,0.55);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 8px; color: rgba(255,107,0,0.8);
+    font-family: 'Press Start 2P', monospace;
+    touch-action: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  #cb-jump.active { background: rgba(255,50,0,0.6); color: #fff; }
+  @media (max-width:520px) {
+    body { justify-content:flex-start; padding-top:6px; }
+  }
+</style>
+</head>
+<body>
+<div id="gameWrapper">
+  <canvas id="gameCanvas"></canvas>
+  <div id="ui">
+    <div>SCORE: <span id="scoreDisplay">0</span></div>
+    <div>LIVES: <span id="livesDisplay">3</span></div>
+    <div>HI: <span id="hiDisplay">0</span></div>
+  </div>
+</div>
+<div id="controls">
+  <div id="dpad">
+    <div class="cb" id="cb-up">▲</div>
+    <div class="cb" id="cb-left">◀</div>
+    <div class="cb" id="cb-right">▶</div>
+    <div class="cb" id="cb-down">▼</div>
+  </div>
+  <div id="cb-jump">JUMP</div>
+</div>
+
+<script>
+// ============================================================
+// PERSONALISATION
+// ============================================================
+const CONN = {
+  hairColor:  '#6B3A2A',
+  skinColor:  '#f5c5a3',
+  shirtColor: '#e03030',
+  hatColor:   '#cc3300',
+  pantsColor: '#1a4db5',
+  hasGlasses: true,
+};
+const FLYNN = {
+  hairColor:  '#d4a520',
+  skinColor:  '#f5c5a3',
+  shirtColor: '#4444cc',
+  pantsColor: '#222244',
+  hasGlasses: false,
+};
+
+// ============================================================
+// SOUND  (Web Audio API — synthesised, no files needed)
+// ============================================================
+let audioCtx = null;
+function audio() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  return audioCtx;
+}
+function tone(freq, type, dur, vol=0.25, freqEnd=null) {
+  try {
+    const a = audio(), o = a.createOscillator(), g = a.createGain();
+    o.connect(g); g.connect(a.destination);
+    o.type = type;
+    o.frequency.setValueAtTime(freq, a.currentTime);
+    if (freqEnd) o.frequency.exponentialRampToValueAtTime(freqEnd, a.currentTime + dur);
+    g.gain.setValueAtTime(0, a.currentTime);
+    g.gain.linearRampToValueAtTime(vol, a.currentTime + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.001, a.currentTime + dur);
+    o.start(a.currentTime); o.stop(a.currentTime + dur);
+  } catch(e) {}
+}
+function noise(dur, vol=0.2) {
+  try {
+    const a = audio(), sr = a.sampleRate;
+    const buf = a.createBuffer(1, sr*dur, sr);
+    const d = buf.getChannelData(0);
+    for (let i=0; i<d.length; i++) d[i] = Math.random()*2-1;
+    const src = a.createBufferSource(), g = a.createGain();
+    src.buffer = buf; src.connect(g); g.connect(a.destination);
+    g.gain.setValueAtTime(vol, a.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, a.currentTime + dur);
+    src.start(); src.stop(a.currentTime + dur);
+  } catch(e) {}
+}
+
+const SFX = {
+  jump()       { tone(350,'square',0.08,0.2); tone(550,'square',0.12,0.15); },
+  land()       { noise(0.05,0.12); },
+  climb()      { if(frameCount%18===0) tone(160,'square',0.06,0.07); },
+  walk()       { if(frameCount%14===0) noise(0.04,0.06); },
+  die()        {
+    tone(440,'sawtooth',0.1,0.3);
+    setTimeout(()=>tone(330,'sawtooth',0.1,0.3),110);
+    setTimeout(()=>tone(220,'sawtooth',0.25,0.3),220);
+  },
+  barrelLand() { noise(0.08,0.2); tone(110,'sine',0.08,0.15); },
+  throw_()     { tone(180,'sawtooth',0.18,0.22,80); },
+  bonus()      { tone(880,'square',0.07,0.2); setTimeout(()=>tone(1100,'square',0.07,0.2),80); },
+  win()        { [523,659,784,1047].forEach((f,i)=>setTimeout(()=>tone(f,'square',0.18,0.3),i*130)); },
+};
+
+// ============================================================
+// CANVAS
+// ============================================================
+const canvas = document.getElementById('gameCanvas');
+const ctx    = canvas.getContext('2d');
+const BASE_W = 448, BASE_H = 512;
+
+function resize() {
+  const s = Math.min(Math.min(window.innerWidth,520)/BASE_W, (window.innerHeight-200)/BASE_H, 1);
+  canvas.width=BASE_W; canvas.height=BASE_H;
+  canvas.style.width=(BASE_W*s)+'px'; canvas.style.height=(BASE_H*s)+'px';
+}
+resize(); window.addEventListener('resize', resize);
+
+// ============================================================
+// LEVEL LAYOUT
+//
+// Classic DK zigzag staircase:
+//   Each platform's DROP EDGE is positioned directly above
+//   the RECEIVING ZONE of the platform below.
+//
+//   P4 (top, narrowest) — gorilla throws barrel RIGHT
+//       right edge at x=370 → falls onto P3 which starts at x=10
+//   P3 — rolls LEFT, left edge at x=10 → falls onto P2 which ends at x=440
+//   P2 — rolls RIGHT, right edge at x=440 → falls onto P1 which starts at x=0
+//   P1 — rolls LEFT, left edge at x=0 → falls off bottom-left
+//   P0 — ground, full width
+//
+//   dir:  1=roll right,  -1=roll left
+// ============================================================
+const PLAT_H   = 10;
+const LADDER_W = 20;
+
+// Platforms stagger so each drop edge is over open air above the platform below.
+const platforms = [
+  { x:  0, y:480, w:448, dir: 1 }, // 0 ground
+  { x: 50, y:388, w:360, dir:-1 }, // 1 rolls LEFT,  exits at x=50  (50px gap left, above ground)
+  { x:  0, y:298, w:398, dir: 1 }, // 2 rolls RIGHT, exits at x=398 (50px gap right, above P1)
+  { x: 50, y:208, w:360, dir:-1 }, // 3 rolls LEFT,  exits at x=50  (50px gap left, P2 starts at 0 so catches it)
+  { x: 80, y:118, w:268, dir: 1 }, // 4 top, rolls RIGHT, exits at x=348 (inside P3: 50..410 ✓)
+];
+
+// Ladders for player to climb
+const ladders = [
+  { x: 60,  yBottom:480, yTop:388 },  // left,  ground → P1
+  { x: 352, yBottom:388, yTop:298 },  // right, P1 → P2
+  { x: 68,  yBottom:298, yTop:208 },  // left,  P2 → P3
+  { x: 332, yBottom:208, yTop:118 },  // right, P3 → P4
+];
+
+// ============================================================
+// STATE
+// ============================================================
+const STATE = { TITLE:'title', PLAYING:'playing', DEAD:'dead', WIN:'win', GAMEOVER:'gameover' };
+let gameState=STATE.TITLE, score=0, hiScore=0, lives=3;
+let deadTimer=0, winTimer=0, gameOverTimer=0, frameCount=0;
+
+const keys={}, prevKeys={};
+const touch={left:false,right:false,up:false,down:false,jump:false};
+let prevTouchJump=false;
+
+window.addEventListener('keydown', e=>{
+  keys[e.code]=true;
+  if(['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code)) e.preventDefault();
+});
+window.addEventListener('keyup', e=>{ keys[e.code]=false; });
+
+function keyPressed(c){ return keys[c]&&!prevKeys[c]; }
+
+// ============================================================
+// TOUCH CONTROLS
+// Each button gets its own touchstart/touchend listener.
+// We use a Set of active button IDs — when a finger goes down
+// on a button it's added; when lifted (anywhere) it's removed.
+// This is the most reliable approach across iOS and Android.
+// ============================================================
+let isTouchDevice = false;
+let anyTouchThisFrame = false;
+const heldButtons = new Set();   // which button ids are currently pressed
+const fingerButton = new Map();  // touch identifier → button id
+
+const btnToAction = { 'cb-up':'up','cb-left':'left','cb-right':'right','cb-down':'down','cb-jump':'jump' };
+
+function bindButton(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+
+  el.addEventListener('touchstart', e => {
+    e.preventDefault();
+    isTouchDevice = true;
+    anyTouchThisFrame = true;
+    document.getElementById('controls').style.display = 'flex';
+    for (const t of e.changedTouches) {
+      fingerButton.set(t.identifier, id);
+      heldButtons.add(id);
+    }
+    el.classList.add('active');
+    syncTouch();
+  }, { passive: false });
+
+  // touchend/cancel on the DOCUMENT so a fast swipe-off still releases
+  document.addEventListener('touchend', e => {
+    for (const t of e.changedTouches) {
+      if (fingerButton.get(t.identifier) === id) {
+        fingerButton.delete(t.identifier);
+        heldButtons.delete(id);
+        el.classList.remove('active');
+      }
+    }
+    syncTouch();
+  }, { passive: false });
+
+  document.addEventListener('touchcancel', e => {
+    for (const t of e.changedTouches) {
+      if (fingerButton.get(t.identifier) === id) {
+        fingerButton.delete(t.identifier);
+        heldButtons.delete(id);
+        el.classList.remove('active');
+      }
+    }
+    syncTouch();
+  }, { passive: false });
+}
+
+function syncTouch() {
+  touch.left=false; touch.right=false; touch.up=false; touch.down=false; touch.jump=false;
+  heldButtons.forEach(id => { const a=btnToAction[id]; if(a) touch[a]=true; });
+}
+
+// Show controls and bind as soon as DOM is ready
+// (also triggered on first touch anywhere)
+document.addEventListener('touchstart', () => {
+  isTouchDevice = true;
+  anyTouchThisFrame = true;
+  document.getElementById('controls').style.display = 'flex';
+}, { once: false, passive: true });
+
+['cb-up','cb-left','cb-right','cb-down','cb-jump'].forEach(bindButton);
+
+const isLeft  = ()=>keys['ArrowLeft'] ||keys['KeyA']||touch.left;
+const isRight = ()=>keys['ArrowRight']||keys['KeyD']||touch.right;
+const isUp    = ()=>keys['ArrowUp']   ||keys['KeyW']||touch.up;
+const isDown  = ()=>keys['ArrowDown'] ||keys['KeyS']||touch.down;
+const isJump  = ()=>keys['Space']||touch.jump;
+function jumpPressed(){ return isJump()&&!(prevKeys['Space']||prevTouchJump); }
+
+// ============================================================
+// ENTITIES
+// ============================================================
+const gorilla = { x:80, y:58, w:52, h:50, armTimer:0, armUp:false, throwTimer:80, throwInterval:180 };
+const flynn   = { x:318, y:88, w:16, h:24 };
+
+let player;
+function resetPlayer(){
+  player={ x:28,y:448,w:20,h:26, vx:0,vy:0,
+           onGround:false,climbing:false,jumping:false,
+           facingRight:true, frame:0,frameTimer:0, dead:false,invincible:0 };
+}
+resetPlayer();
+
+let barrels=[], jumpedBarrels=new Set(), bonusTexts=[];
+
+function spawnBarrel(){
+  SFX.throw_();
+  barrels.push({
+    x: gorilla.x+gorilla.w+2,
+    y: gorilla.y+gorilla.h-16,
+    w:16, h:14, vx:0, vy:0,
+    onGround:true,
+    platIdx:4,       // starts ON the top platform
+    frame:0, frameTimer:0
+  });
+}
+function showBonus(x,y,t){ bonusTexts.push({x,y,text:t,timer:60}); }
+
+// ============================================================
+// DRAWING
+// ============================================================
+function drawBg(){
+  ctx.fillStyle='#080818'; ctx.fillRect(0,0,BASE_W,BASE_H);
+  ctx.strokeStyle='#111133'; ctx.lineWidth=1;
+  for(let x=0;x<BASE_W;x+=32){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,BASE_H);ctx.stroke();}
+  for(let y=0;y<BASE_H;y+=32){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(BASE_W,y);ctx.stroke();}
+}
+
+function drawPlatforms(){
+  platforms.forEach(p=>{
+    ctx.fillStyle='#c85000'; ctx.fillRect(p.x,p.y,p.w,PLAT_H);
+    ctx.fillStyle='#ff8833'; ctx.fillRect(p.x,p.y,p.w,3);
+    ctx.fillStyle='#7a2d00'; ctx.fillRect(p.x,p.y+PLAT_H-2,p.w,2);
+    ctx.fillStyle='#ff6b00';
+    for(let rx=p.x+20;rx<p.x+p.w-10;rx+=40) ctx.fillRect(rx,p.y+3,4,4);
+  });
+}
+
+function drawLadders(){
+  ladders.forEach(l=>{
+    const h=l.yBottom-l.yTop;
+    ctx.fillStyle='#ffe066';
+    ctx.fillRect(l.x,l.yTop,3,h); ctx.fillRect(l.x+LADDER_W-3,l.yTop,3,h);
+    ctx.fillStyle='#ffd700';
+    for(let y=l.yTop+8;y<l.yBottom;y+=14) ctx.fillRect(l.x+3,y,LADDER_W-6,3);
+  });
+}
+
+function drawGorilla(){
+  const g=gorilla;
+  ctx.fillStyle='#3a1e00'; ctx.fillRect(g.x+10,g.y+18,32,30);
+  ctx.fillStyle='#4a2800'; ctx.fillRect(g.x+13,g.y+2,26,20);
+  ctx.fillStyle='#2a1400'; ctx.fillRect(g.x+13,g.y+4,26,5);
+  ctx.fillStyle='#ff3300'; ctx.fillRect(g.x+17,g.y+8,5,5); ctx.fillRect(g.x+30,g.y+8,5,5);
+  ctx.fillStyle='#000';    ctx.fillRect(g.x+19,g.y+10,2,2); ctx.fillRect(g.x+32,g.y+10,2,2);
+  ctx.fillStyle='#7a4a00'; ctx.fillRect(g.x+19,g.y+14,14,6);
+  ctx.fillStyle='#ff6644'; ctx.fillRect(g.x+21,g.y+16,10,3);
+  ctx.fillStyle='#6a4200'; ctx.fillRect(g.x+14,g.y+22,24,18);
+  const ay=gorilla.armUp?g.y+8:g.y+22;
+  ctx.fillStyle='#3a1e00';
+  ctx.fillRect(g.x,ay,12,22); ctx.fillRect(g.x+40,g.y+22,12,22);
+  ctx.fillStyle='#2a1400';
+  ctx.fillRect(g.x,ay+18,14,8); ctx.fillRect(g.x+38,g.y+40,14,8);
+  ctx.fillRect(g.x+12,g.y+46,12,14); ctx.fillRect(g.x+28,g.y+46,12,14);
+  ctx.fillRect(g.x+10,g.y+57,14,6);  ctx.fillRect(g.x+28,g.y+57,14,6);
+}
+
+function drawBarrel(b){
+  ctx.fillStyle='#8B4513'; ctx.fillRect(b.x,b.y,b.w,b.h);
+  ctx.fillStyle='#a0522d'; ctx.fillRect(b.x+4,b.y+1,2,b.h-2); ctx.fillRect(b.x+10,b.y+1,2,b.h-2);
+  ctx.fillStyle='#888';    ctx.fillRect(b.x,b.y+2,b.w,2);     ctx.fillRect(b.x,b.y+b.h-4,b.w,2);
+  if(Math.floor(b.frame/3)%2===0){
+    ctx.fillStyle='rgba(255,200,100,0.35)'; ctx.fillRect(b.x+2,b.y+4,b.w-4,4);
+  }
+}
+
+function drawConn(p){
+  if(p.invincible>0&&Math.floor(p.invincible/4)%2===0) return;
+  const C=CONN;
+  ctx.save();
+  if(!p.facingRight){
+    ctx.translate(Math.round(p.x)+p.w,Math.round(p.y));
+    ctx.scale(-1,1); ctx.translate(-p.w,0);
+  } else {
+    ctx.translate(Math.round(p.x),Math.round(p.y));
+  }
+  const lf=Math.floor(p.frame/4)%2;
+  ctx.fillStyle=C.pantsColor;
+  if(p.climbing){ ctx.fillRect(2,14,6,12); ctx.fillRect(12,14,6,12); }
+  else if(p.onGround&&(isLeft()||isRight())){
+    if(lf===0){ctx.fillRect(2,14,6,12);ctx.fillRect(10,18,6,8);}
+    else      {ctx.fillRect(2,18,6,8); ctx.fillRect(10,14,6,12);}
+  } else {
+    if(p.jumping){ctx.fillRect(0,16,7,10);ctx.fillRect(12,14,7,10);}
+    else         {ctx.fillRect(2,14,6,12);ctx.fillRect(10,14,6,12);}
+  }
+  ctx.fillStyle='#2a1400'; ctx.fillRect(0,23,8,3); ctx.fillRect(10,23,8,3);
+  ctx.fillStyle=C.shirtColor; ctx.fillRect(2,6,16,10);
+  if(p.jumping){ctx.fillRect(-3,5,5,8);ctx.fillRect(18,5,5,8);}
+  else if(p.climbing){
+    if(lf===0){ctx.fillRect(-3,6,5,8);ctx.fillRect(18,10,5,8);}
+    else      {ctx.fillRect(-3,10,5,8);ctx.fillRect(18,6,5,8);}
+  } else {ctx.fillRect(-2,8,5,7);ctx.fillRect(17,8,5,7);}
+  ctx.fillStyle=C.skinColor;
+  if(p.jumping){ctx.fillRect(-3,12,4,4);ctx.fillRect(19,12,4,4);}
+  else         {ctx.fillRect(-2,14,4,4);ctx.fillRect(18,14,4,4);}
+  ctx.fillStyle=C.skinColor; ctx.fillRect(3,-1,14,9); ctx.fillRect(1,1,4,5); ctx.fillRect(15,1,4,5);
+  ctx.fillStyle=C.hatColor;  ctx.fillRect(0,-4,20,5); ctx.fillRect(3,-8,14,5);
+  ctx.fillStyle=C.hairColor; ctx.fillRect(3,4,3,4);   ctx.fillRect(14,4,3,4);
+  ctx.fillStyle='#222';      ctx.fillRect(6,1,3,3);   ctx.fillRect(11,1,3,3);
+  ctx.fillStyle=C.hairColor; ctx.fillRect(5,5,10,2);
+  if(C.hasGlasses){
+    ctx.fillStyle='#333';
+    ctx.fillRect(4,-1,6,1); ctx.fillRect(4,3,6,1); ctx.fillRect(4,-1,1,5); ctx.fillRect(9,-1,1,5);
+    ctx.fillRect(10,-1,6,1); ctx.fillRect(10,3,6,1); ctx.fillRect(15,-1,1,5);
+    ctx.fillRect(9,1,2,1); ctx.fillRect(3,0,1,2); ctx.fillRect(16,0,1,2);
+  }
+  ctx.restore();
+}
+
+function drawFlynn(){
+  const f=flynn, bob=Math.round(Math.sin(frameCount*0.08)*2);
+  ctx.save(); ctx.translate(f.x,f.y+bob);
+  ctx.fillStyle=FLYNN.pantsColor; ctx.fillRect(2,16,5,8); ctx.fillRect(9,16,5,8);
+  ctx.fillStyle='#333'; ctx.fillRect(1,22,6,3); ctx.fillRect(9,22,6,3);
+  ctx.fillStyle=FLYNN.shirtColor; ctx.fillRect(2,8,12,10);
+  ctx.fillStyle=FLYNN.shirtColor; ctx.fillRect(-2,5,5,7); ctx.fillRect(13,5,5,7);
+  ctx.fillStyle=FLYNN.skinColor;  ctx.fillRect(-2,2,4,4); ctx.fillRect(14,2,4,4);
+  ctx.fillStyle=FLYNN.skinColor;  ctx.fillRect(3,-1,10,10); ctx.fillRect(1,1,3,5); ctx.fillRect(12,1,3,5);
+  ctx.fillStyle=FLYNN.hairColor;
+  ctx.fillRect(2,-3,12,4); ctx.fillRect(2,0,2,5); ctx.fillRect(12,0,2,5); ctx.fillRect(7,-5,4,3);
+  ctx.fillStyle='#222'; ctx.fillRect(5,2,2,3); ctx.fillRect(9,2,2,3);
+  ctx.fillStyle='#c06060'; ctx.fillRect(5,6,6,2);
+  ctx.restore();
+  const phase=Math.floor(frameCount/90)%2;
+  if(frameCount%90<70){
+    const msg=phase===0?'HELP!':'CONN!', bx=f.x+f.w+4, by=f.y+bob-22;
+    ctx.fillStyle='#fff'; ctx.fillRect(bx,by,48,16); ctx.fillRect(bx,by+12,5,5);
+    ctx.fillStyle='#000'; ctx.font='5px "Press Start 2P"'; ctx.fillText(msg,bx+4,by+11);
+  }
+}
+
+// ============================================================
+// PHYSICS CONSTANTS
+// ============================================================
+const GRAVITY      = 0.50;
+const PLAYER_SPEED = 2.2;
+const JUMP_FORCE   = -6.5;
+const CLIMB_SPEED  = 1.8;
+const BARREL_SPEED = 2.0;
+const BARREL_GRAV  = 0.55;
+
+// ============================================================
+// PLAYER UPDATE
+// ============================================================
+function getLadder(x,y,w,h){
+  for(const l of ladders){
+    const cx=x+w/2;
+    if(cx>=l.x&&cx<=l.x+LADDER_W&&y+h>l.yTop&&y<l.yBottom) return l;
+  }
+  return null;
+}
+
+function updatePlayer(){
+  const p=player; if(p.dead) return;
+  if(p.invincible>0) p.invincible--;
+  const ladder=getLadder(p.x,p.y,p.w,p.h);
+
+  if(ladder&&(isUp()||isDown())&&!p.jumping){
+    p.climbing=true; p.vy=0; p.vx=0;
+    if(isUp())   p.vy=-CLIMB_SPEED;
+    if(isDown()) p.vy= CLIMB_SPEED;
+    p.y+=p.vy;
+    p.x+=(ladder.x+LADDER_W/2-p.w/2-p.x)*0.3;
+    SFX.climb();
+  } else {
+    if(p.climbing&&!ladder) p.climbing=false;
+    p.vx=0;
+    if(!p.climbing){
+      if(isLeft()) { p.vx=-PLAYER_SPEED; p.facingRight=false; }
+      if(isRight()){ p.vx= PLAYER_SPEED; p.facingRight=true;  }
+    }
+    if(jumpPressed()&&p.onGround&&!p.climbing){ p.vy=JUMP_FORCE; p.onGround=false; p.jumping=true; SFX.jump(); }
+    const prevGround=p.onGround;
+    p.vy+=GRAVITY; p.y+=p.vy; p.x+=p.vx;
+    p.onGround=false;
+    for(const pl of platforms){
+      if(p.x+p.w>pl.x&&p.x<pl.x+pl.w){
+        const feet=p.y+p.h;
+        if(p.vy>=0&&feet>=pl.y&&feet<=pl.y+14){
+          p.y=pl.y-p.h; p.vy=0; p.onGround=true; p.jumping=false; p.climbing=false;
+        }
+      }
+    }
+    if(p.onGround&&!prevGround) SFX.land();
+    if(p.onGround&&(isLeft()||isRight())) SFX.walk();
+  }
+  if(p.x<0) p.x=0;
+  if(p.x+p.w>BASE_W) p.x=BASE_W-p.w;
+  if(p.y+p.h>BASE_H+40){ killPlayer(); return; }
+  if(p.y<0){ p.y=0; p.vy=0; }
+  p.frameTimer++; if(p.frameTimer>=3){ p.frame++; p.frameTimer=0; }
+  if(p.x+p.w>flynn.x&&p.x<flynn.x+flynn.w&&p.y+p.h>flynn.y&&p.y<flynn.y+flynn.h){
+    gameState=STATE.WIN; winTimer=0; SFX.win(); if(score>hiScore) hiScore=score;
+  }
+}
+
+// ============================================================
+// GORILLA UPDATE
+// ============================================================
+function updateGorilla(){
+  gorilla.armTimer++; gorilla.throwTimer++;
+  if(gorilla.armTimer>35){ gorilla.armUp=!gorilla.armUp; gorilla.armTimer=0; }
+  if(gorilla.throwTimer>=gorilla.throwInterval){
+    spawnBarrel(); gorilla.throwTimer=0;
+    gorilla.throwInterval=140+Math.random()*140;
+  }
+}
+
+// ============================================================
+// BARREL UPDATE
+//
+// State machine:
+//   onGround=true  → rolling on platforms[platIdx] at that platform's dir
+//                    until it hits the drop edge, then onGround=false
+//   onGround=false → falling under gravity
+//                    check all platforms BELOW current one for landing
+//                    on landing: snap, set platIdx, onGround=true
+// ============================================================
+function updateBarrels(){
+  barrels.forEach(b=>{
+    b.frameTimer++; if(b.frameTimer>=3){ b.frame++; b.frameTimer=0; }
+
+    if(b.onGround){
+      // Rolling on current platform
+      const pl=platforms[b.platIdx];
+      b.vx = BARREL_SPEED * pl.dir;
+      b.x += b.vx;
+      // Reached drop edge?
+      const droppedRight = pl.dir> 0 && b.x+b.w >= pl.x+pl.w;
+      const droppedLeft  = pl.dir< 0 && b.x     <= pl.x;
+      if(droppedRight||droppedLeft){
+        b.onGround=false;
+        b.vy=0.8;
+        // Carry a little horizontal so the barrel arcs toward the platform below
+        b.vx = pl.dir * 1.2;
+      }
+    } else {
+      // Falling
+      b.vy += BARREL_GRAV;
+      b.x  += b.vx;
+      b.y  += b.vy;
+
+      // Check for landing — only on platforms with LOWER index (further down on screen)
+      for(let i=b.platIdx-1; i>=0; i--){
+        const pl=platforms[i];
+        const feet=b.y+b.h;
+        if(b.x+b.w>pl.x+2 && b.x<pl.x+pl.w-2){
+          if(b.vy>0 && feet>=pl.y && feet<=pl.y+PLAT_H+16){
+            // Land!
+            b.y=pl.y-b.h;
+            b.vy=0;
+            b.onGround=true;
+            b.platIdx=i;
+            SFX.barrelLand();
+            break;
+          }
+        }
+      }
+    }
+
+    // Jump-over bonus
+    if(!jumpedBarrels.has(b)&&player.jumping&&
+       player.y+player.h<b.y+b.h/2&&
+       player.x+player.w>b.x&&player.x<b.x+b.w){
+      jumpedBarrels.add(b); score+=100; showBonus(b.x,b.y-10,'100!'); SFX.bonus();
+    }
+  });
+  barrels=barrels.filter(b=>b.y<BASE_H+100);
+}
+
+function updateBonusTexts(){
+  bonusTexts.forEach(t=>{t.y-=0.6;t.timer--;});
+  bonusTexts=bonusTexts.filter(t=>t.timer>0);
+}
+
+function checkBarrelCollision(){
+  if(player.invincible>0||player.dead) return;
+  for(const b of barrels){
+    if(player.x+3<b.x+b.w-2&&player.x+player.w-3>b.x+2&&
+       player.y+3<b.y+b.h  &&player.y+player.h  >b.y+3){ killPlayer(); return; }
+  }
+}
+
+function killPlayer(){
+  if(player.dead) return;
+  player.dead=true; lives--; deadTimer=0; gameState=STATE.DEAD; SFX.die();
+}
+
+// ============================================================
+// SCREENS
+// ============================================================
+function drawTitle(){
+  drawBg();
+  for(let i=0;i<50;i++){
+    ctx.globalAlpha=0.3+0.7*Math.abs(Math.sin(frameCount*0.04+i));
+    ctx.fillStyle='#fff';
+    ctx.fillRect((i*137.5)%BASE_W,(i*73.1+frameCount*0.15)%BASE_H,2,2);
+  }
+  ctx.globalAlpha=1;
+  ctx.fillStyle='#ff6b00'; ctx.fillRect(30,38,388,4); ctx.fillRect(30,172,388,4);
+  ctx.textAlign='center';
+  ctx.shadowColor='#ff6b00'; ctx.shadowBlur=20; ctx.fillStyle='#ff6b00';
+  ctx.font='bold 34px "Press Start 2P"'; ctx.fillText('CONN &',BASE_W/2,110);
+  ctx.shadowColor='#ffdd00'; ctx.shadowBlur=15; ctx.fillStyle='#ffdd00';
+  ctx.fillText('FLYNN',BASE_W/2,155); ctx.shadowBlur=0;
+  ctx.fillStyle='#ff9944'; ctx.font='8px "Press Start 2P"'; ctx.fillText('THE GREAT RESCUE',BASE_W/2,198);
+
+  const fy=262;
+  ctx.fillStyle='#c85000'; ctx.fillRect(30,fy,388,6);
+  ctx.fillStyle='#3a1e00'; ctx.fillRect(175,fy-30,32,28); ctx.fillRect(179,fy-40,24,16);
+  ctx.fillStyle='#ff3300'; ctx.fillRect(183,fy-37,4,4);   ctx.fillRect(194,fy-37,4,4);
+  ctx.fillStyle=FLYNN.shirtColor; ctx.fillRect(285,fy-20,10,18);
+  ctx.fillStyle=FLYNN.skinColor;  ctx.fillRect(286,fy-28,8,9);
+  ctx.fillStyle=FLYNN.hairColor;  ctx.fillRect(285,fy-31,10,4);
+  ctx.fillStyle=FLYNN.shirtColor; ctx.fillRect(282,fy-26,4,8); ctx.fillRect(295,fy-26,4,8);
+  const cx2=40+(frameCount%220);
+  ctx.fillStyle=CONN.shirtColor; ctx.fillRect(cx2,fy-20,12,14);
+  ctx.fillStyle=CONN.skinColor;  ctx.fillRect(cx2+1,fy-28,10,9);
+  ctx.fillStyle=CONN.hatColor;   ctx.fillRect(cx2,fy-32,12,5);
+  const bx2=(frameCount*1.6)%260;
+  ctx.fillStyle='#8B4513'; ctx.fillRect(40+bx2,fy-12,12,10);
+  ctx.fillStyle='#888';    ctx.fillRect(40+bx2,fy-11,12,2); ctx.fillRect(40+bx2,fy-5,12,2);
+
+  if(Math.floor(frameCount/30)%2===0){
+    ctx.fillStyle='#fff'; ctx.font='9px "Press Start 2P"';
+    ctx.fillText('PRESS SPACE / TAP TO START',BASE_W/2,308);
+  }
+  ctx.fillStyle='#888'; ctx.font='7px "Press Start 2P"';
+  ctx.fillText('ARROWS / DPAD = MOVE & CLIMB',BASE_W/2,346);
+  ctx.fillText('SPACE / JUMP = JUMP',BASE_W/2,364);
+  ctx.fillText('JUMP OVER BARRELS FOR BONUS!',BASE_W/2,382);
+  ctx.fillText('REACH FLYNN TO WIN!',BASE_W/2,400);
+  ctx.textAlign='left';
+}
+
+function drawWin(){
+  drawBg(); drawPlatforms(); drawLadders(); drawGorilla(); drawFlynn(); drawConn(player);
+  ctx.fillStyle='rgba(0,0,0,0.55)'; ctx.fillRect(0,0,BASE_W,BASE_H);
+  ctx.textAlign='center';
+  ctx.fillStyle='#ffdd00'; ctx.shadowColor='#ffdd00'; ctx.shadowBlur=20;
+  ctx.font='18px "Press Start 2P"'; ctx.fillText('FLYNN IS SAVED!',BASE_W/2,190);
+  ctx.shadowBlur=0;
+  ctx.fillStyle='#ff9944'; ctx.font='9px "Press Start 2P"'; ctx.fillText('WELL DONE CONN!',BASE_W/2,225);
+  ctx.fillStyle='#ff6b00'; ctx.font='10px "Press Start 2P"'; ctx.fillText('SCORE: '+score,BASE_W/2,268);
+  if(winTimer>90&&Math.floor(winTimer/25)%2===0){
+    ctx.fillStyle='#fff'; ctx.font='8px "Press Start 2P"'; ctx.fillText('PRESS SPACE TO PLAY AGAIN',BASE_W/2,328);
+  }
+  ctx.textAlign='left';
+}
+
+function drawDead(){
+  drawBg(); drawPlatforms(); drawLadders();
+  ctx.save();
+  ctx.translate(player.x+player.w/2,player.y+player.h/2);
+  ctx.rotate(deadTimer*0.12); ctx.translate(-player.w/2,-player.h/2);
+  drawConn({...player,invincible:0,x:0,y:0});
+  ctx.restore();
+  ctx.textAlign='center';
+  ctx.fillStyle='#ff3300'; ctx.shadowColor='#ff3300'; ctx.shadowBlur=14;
+  ctx.font='16px "Press Start 2P"'; ctx.fillText('OH NO!',BASE_W/2,290);
+  ctx.shadowBlur=0;
+  if(deadTimer>60){ ctx.fillStyle='#fff'; ctx.font='9px "Press Start 2P"'; ctx.fillText('LIVES: '+lives,BASE_W/2,335); }
+  ctx.textAlign='left';
+}
+
+function drawGameOver(){
+  drawBg();
+  ctx.textAlign='center';
+  ctx.fillStyle='#ff3300'; ctx.shadowColor='#ff3300'; ctx.shadowBlur=20;
+  ctx.font='22px "Press Start 2P"'; ctx.fillText('GAME OVER',BASE_W/2,190); ctx.shadowBlur=0;
+  ctx.fillStyle='#ff6b00'; ctx.font='10px "Press Start 2P"';
+  ctx.fillText('SCORE: '+score,BASE_W/2,250); ctx.fillText('HI SCORE: '+hiScore,BASE_W/2,280);
+  ctx.fillStyle='#888'; ctx.font='8px "Press Start 2P"';
+  ctx.fillText('POOR FLYNN IS STILL UP THERE...',BASE_W/2,330);
+  if(gameOverTimer>90&&Math.floor(gameOverTimer/30)%2===0){
+    ctx.fillStyle='#fff'; ctx.font='9px "Press Start 2P"'; ctx.fillText('PRESS SPACE TO TRY AGAIN',BASE_W/2,380);
+  }
+  ctx.textAlign='left';
+}
+
+// ============================================================
+// MAIN LOOP
+// ============================================================
+function startGame(){
+  score=0; lives=3; barrels=[]; jumpedBarrels=new Set(); bonusTexts=[];
+  gorilla.throwTimer=80; gorilla.throwInterval=180;
+  resetPlayer(); gameState=STATE.PLAYING;
+  try{ audio().resume(); }catch(e){}
+}
+
+function update(){
+  frameCount++;
+  if(gameState===STATE.TITLE){
+    if(keyPressed('Space')||keyPressed('Enter')||anyTouchThisFrame) startGame();
+  } else if(gameState===STATE.PLAYING){
+    updatePlayer(); updateGorilla(); updateBarrels(); checkBarrelCollision(); updateBonusTexts();
+  } else if(gameState===STATE.DEAD){
+    deadTimer++;
+    if(deadTimer>160){
+      if(lives<=0){ if(score>hiScore) hiScore=score; gameState=STATE.GAMEOVER; gameOverTimer=0; }
+      else{ barrels=[]; jumpedBarrels=new Set(); resetPlayer(); gameState=STATE.PLAYING; }
+    }
+  } else if(gameState===STATE.WIN){
+    winTimer++;
+    if(winTimer>90&&(keyPressed('Space')||keyPressed('Enter')||(touch.jump&&!prevTouchJump))) startGame();
+  } else if(gameState===STATE.GAMEOVER){
+    gameOverTimer++;
+    if(gameOverTimer>90&&(keyPressed('Space')||keyPressed('Enter')||(touch.jump&&!prevTouchJump))) gameState=STATE.TITLE;
+  }
+  for(const k in keys) prevKeys[k]=keys[k];
+  prevTouchJump=touch.jump;
+  anyTouchThisFrame=false;
+  document.getElementById('scoreDisplay').textContent=score;
+  document.getElementById('livesDisplay').textContent=lives;
+  document.getElementById('hiDisplay').textContent=hiScore;
+}
+
+
+
+function draw(){
+  ctx.clearRect(0,0,BASE_W,BASE_H);
+  if(gameState===STATE.TITLE)    { drawTitle(); return; }
+  if(gameState===STATE.DEAD)     { drawDead(); return; }
+  if(gameState===STATE.WIN)      { drawWin(); return; }
+  if(gameState===STATE.GAMEOVER) { drawGameOver(); return; }
+  drawBg(); drawPlatforms(); drawLadders(); drawGorilla(); drawFlynn();
+  barrels.forEach(drawBarrel);
+  drawConn(player);
+  bonusTexts.forEach(t=>{
+    ctx.globalAlpha=t.timer/60; ctx.fillStyle='#ffdd00';
+    ctx.font='10px "Press Start 2P"'; ctx.fillText(t.text,t.x,t.y); ctx.globalAlpha=1;
+  });
+  ctx.fillStyle='#ff6b00'; ctx.font='6px "Press Start 2P"';
+  ctx.fillText('SAVE FLYNN!',flynn.x-20,flynn.y-28);
+}
+
+function loop(){ update(); draw(); requestAnimationFrame(loop); }
+loop();
+</script>
+</body>
+</html>
