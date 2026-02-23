@@ -3,12 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Material Calculator</title>
-    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=Playfair+Display:wght@500;600&display=swap" rel="stylesheet">
+    <title>Featurepiece Tools</title>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=Playfair+Display:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
         :root {
             --bg-primary: #f8f6f3;
             --bg-secondary: #ffffff;
+            --bg-accent: #2c3e50;
             --text-primary: #2c3e50;
             --text-secondary: #6b7c8a;
             --text-light: #ffffff;
@@ -16,540 +17,578 @@
             --accent-hover: #b8956a;
             --border: #e8e4df;
             --shadow: rgba(44, 62, 80, 0.08);
-            --success: #27ae60;
-            --warning: #e67e22;
+            --shadow-hover: rgba(44, 62, 80, 0.15);
             --danger: #c0392b;
         }
 
-        * { box-sizing: border-box; margin: 0; padding: 0; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
 
         body {
             font-family: 'DM Sans', sans-serif;
             background: var(--bg-primary);
             color: var(--text-primary);
             min-height: 100vh;
-            padding: 24px;
-            line-height: 1.5;
+            line-height: 1.6;
         }
 
-        .container { max-width: 1100px; margin: 0 auto; }
+        .container { max-width: 900px; margin: 0 auto; padding: 30px 24px; }
 
-        .card {
-            background: var(--bg-secondary);
-            border-radius: 12px;
-            padding: 24px;
-            box-shadow: 0 2px 12px var(--shadow);
+        .header-top { display: flex; justify-content: flex-end; margin-bottom: 10px; }
+
+        header { text-align: center; margin-bottom: 30px; }
+
+        .btn {
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.875rem;
+            font-weight: 500;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
         }
 
-        .header {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            margin-bottom: 20px;
-        }
+        .btn-settings { background: var(--bg-accent); color: var(--text-light); }
+        .btn-settings:hover { background: #3d5166; }
+        .btn-primary { background: var(--accent); color: var(--text-light); }
+        .btn-primary:hover { background: var(--accent-hover); }
+        .btn-secondary { background: var(--bg-secondary); color: var(--text-primary); border: 1px solid var(--border); }
+        .btn-secondary:hover { background: var(--border); }
+        .btn-small { padding: 6px 12px; font-size: 0.8rem; }
 
-        .header svg { color: var(--accent); }
+        .logo {
+            width: 80px; height: 80px;
+            background: var(--bg-accent);
+            border-radius: 20px;
+            display: flex; align-items: center; justify-content: center;
+            margin: 0 auto 24px;
+            font-size: 2.5rem;
+            box-shadow: 0 4px 20px var(--shadow);
+        }
 
         h1 {
             font-family: 'Playfair Display', serif;
-            font-size: 1.75rem;
+            font-size: 2.75rem;
             font-weight: 500;
-        }
-
-        h2 {
-            font-family: 'Playfair Display', serif;
-            font-size: 1.1rem;
-            font-weight: 500;
-            margin-bottom: 14px;
-            padding-bottom: 10px;
-            border-bottom: 1px solid var(--border);
-        }
-
-        h3 {
-            font-size: 0.9rem;
-            font-weight: 600;
-            margin-bottom: 10px;
-        }
-
-        .settings-bar {
-            background: var(--bg-primary);
-            border-radius: 8px;
-            padding: 16px;
-            margin-bottom: 20px;
-            display: flex;
-            gap: 24px;
-            flex-wrap: wrap;
-            align-items: center;
-        }
-
-        .setting-group label {
-            display: block;
-            font-size: 0.85rem;
-            color: var(--text-secondary);
-            margin-bottom: 8px;
-            font-weight: 500;
-        }
-
-        .toggle-buttons {
-            display: flex;
-            gap: 8px;
-        }
-
-        .toggle-btn {
-            padding: 8px 20px;
-            border: 1px solid var(--border);
-            background: var(--bg-secondary);
-            border-radius: 6px;
-            font-family: 'DM Sans', sans-serif;
-            font-size: 0.9rem;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .toggle-btn:hover { background: var(--border); }
-        .toggle-btn.active { background: var(--accent); color: var(--text-light); border-color: var(--accent); }
-
-        .switch-container {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .switch {
-            width: 52px;
-            height: 28px;
-            background: #ccc;
-            border-radius: 14px;
-            position: relative;
-            cursor: pointer;
-            transition: background 0.2s;
-        }
-
-        .switch.active { background: var(--accent); }
-
-        .switch-knob {
-            width: 22px;
-            height: 22px;
-            background: white;
-            border-radius: 50%;
-            position: absolute;
-            top: 3px;
-            left: 3px;
-            transition: transform 0.2s;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
-        }
-
-        .switch.active .switch-knob { transform: translateX(24px); }
-
-        .switch-label { font-size: 0.85rem; color: var(--text-secondary); }
-
-        .main-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-        }
-
-        @media (max-width: 800px) {
-            .main-grid { grid-template-columns: 1fr; }
-        }
-
-        .panel {
-            background: var(--bg-primary);
-            border-radius: 8px;
-            padding: 16px;
-        }
-
-        .panel-accent {
-            border-left: 4px solid var(--accent);
-        }
-
-        .input-row {
-            display: flex;
-            gap: 12px;
             margin-bottom: 12px;
         }
 
-        .input-group { flex: 1; }
+        .subtitle { color: var(--text-secondary); font-size: 1.1rem; }
 
-        .input-group label {
-            display: block;
-            font-size: 0.8rem;
-            color: var(--text-secondary);
-            margin-bottom: 4px;
-            font-weight: 500;
+        .tools-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 24px;
+            margin-bottom: 30px;
         }
 
-        .input-group input {
-            width: 100%;
-            padding: 8px 10px;
+        .tool-card {
+            background: var(--bg-secondary);
+            border-radius: 16px;
+            padding: 32px;
+            box-shadow: 0 2px 16px var(--shadow);
+            transition: all 0.3s ease;
+            cursor: pointer;
+            text-decoration: none;
+            color: inherit;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .tool-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 4px;
+            background: var(--accent);
+            transform: scaleX(0);
+            transition: transform 0.3s ease;
+        }
+
+        .tool-card:hover { transform: translateY(-4px); box-shadow: 0 8px 32px var(--shadow-hover); }
+        .tool-card:hover::before { transform: scaleX(1); }
+
+        .tool-icon {
+            width: 56px; height: 56px;
+            background: var(--bg-primary);
+            border-radius: 12px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.75rem;
+            margin-bottom: 20px;
+            transition: all 0.3s ease;
+        }
+
+        .tool-card:hover .tool-icon { background: var(--accent); transform: scale(1.05); }
+
+        .tool-name {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.35rem;
+            font-weight: 500;
+            margin-bottom: 8px;
+        }
+
+        .tool-description { color: var(--text-secondary); font-size: 0.95rem; flex: 1; }
+
+        .tool-arrow {
+            margin-top: 20px;
+            color: var(--accent);
+            font-size: 1.25rem;
+            transition: transform 0.3s ease;
+            align-self: flex-end;
+        }
+
+        .tool-card:hover .tool-arrow { transform: translateX(6px); }
+
+        .empty-state { text-align: center; padding: 60px 20px; color: var(--text-secondary); grid-column: 1 / -1; }
+        .empty-state-icon { font-size: 3rem; margin-bottom: 16px; opacity: 0.5; }
+
+        footer { text-align: center; padding-top: 20px; border-top: 1px solid var(--border); }
+        .footer-text { color: var(--text-secondary); font-size: 0.9rem; }
+        .version { display: inline-block; background: var(--bg-primary); padding: 4px 12px; border-radius: 20px; font-size: 0.8rem; color: var(--text-secondary); margin-top: 12px; }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.5);
+            display: none;
+            align-items: center; justify-content: center;
+            z-index: 1000;
+        }
+
+        .modal-overlay.active { display: flex; }
+
+        .modal {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            padding: 24px;
+            width: 90%;
+            max-width: 500px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal h3 { font-family: 'Playfair Display', serif; margin-bottom: 20px; }
+
+        .form-group { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
+        .form-group label { font-size: 0.875rem; color: var(--text-secondary); font-weight: 500; }
+        .form-group input, .form-group textarea {
+            padding: 10px 12px;
             border: 1px solid var(--border);
             border-radius: 6px;
             font-family: 'DM Sans', sans-serif;
-            font-size: 0.95rem;
-        }
-
-        .input-group input:focus {
-            outline: none;
-            border-color: var(--accent);
-        }
-
-        .board-section {
-            background: var(--bg-secondary);
-            border-radius: 6px;
-            padding: 12px;
-            margin-top: 12px;
-            border: 1px solid var(--border);
-        }
-
-        .results-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
-        }
-
-        .result-card {
-            background: var(--bg-secondary);
-            border-radius: 8px;
-            padding: 12px;
-            border: 1px solid var(--border);
-        }
-
-        .result-card.success { background: #e8f5e9; border-color: #a5d6a7; }
-        .result-card.warning { background: #fff3e0; border-color: #ffcc80; }
-        .result-card.info { background: #f3e5f5; border-color: #ce93d8; }
-
-        .result-label {
-            font-size: 0.8rem;
-            color: var(--text-secondary);
-            margin-bottom: 2px;
-        }
-
-        .result-card.success .result-label { color: #2e7d32; }
-        .result-card.warning .result-label { color: #e65100; }
-        .result-card.info .result-label { color: #7b1fa2; }
-
-        .result-value {
-            font-size: 1.5rem;
-            font-weight: 700;
-            color: var(--accent);
-        }
-
-        .result-card.success .result-value { color: #2e7d32; }
-        .result-card.warning .result-value { color: #e65100; }
-        .result-card.info .result-value { color: #7b1fa2; }
-
-        .result-note {
-            font-size: 0.7rem;
-            color: #e65100;
-            margin-top: 2px;
-        }
-
-        .empty-state {
-            color: var(--text-secondary);
-            font-style: italic;
-            padding: 20px 0;
-        }
-
-        .preview-section { text-align: center; }
-
-        .preview-title {
             font-size: 0.9rem;
+        }
+        .form-group input:focus, .form-group textarea:focus { outline: none; border-color: var(--accent); }
+        .form-group textarea { resize: vertical; min-height: 80px; }
+
+        .modal-actions { display: flex; gap: 8px; margin-top: 8px; }
+        .modal-actions .btn { flex: 1; }
+
+        .pin-input { display: flex; gap: 8px; justify-content: center; margin: 20px 0; }
+        .pin-input input {
+            width: 45px; height: 50px;
+            text-align: center;
+            font-size: 1.25rem;
             font-weight: 600;
-            margin-bottom: 8px;
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            font-family: 'DM Sans', sans-serif;
+        }
+        .pin-input input:focus { outline: none; border-color: var(--accent); }
+
+        .pin-error { color: var(--danger); text-align: center; font-size: 0.875rem; margin-top: 8px; display: none; }
+        .pin-error.show { display: block; }
+
+        .settings-section { margin-bottom: 24px; }
+        .settings-section h4 { font-family: 'Playfair Display', serif; font-size: 1rem; margin-bottom: 12px; }
+
+        .tools-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+
+        .tool-item {
             display: flex;
             align-items: center;
-            justify-content: center;
-            gap: 8px;
-        }
-
-        .preview-badge {
-            background: var(--accent);
-            color: white;
-            padding: 2px 8px;
-            border-radius: 10px;
-            font-size: 0.75rem;
-        }
-
-        .preview-svg {
-            border: 2px solid var(--border);
-            background: white;
+            gap: 12px;
+            padding: 12px;
+            background: var(--bg-primary);
             border-radius: 8px;
-            width: 100%;
-            max-height: 300px;
         }
 
-        .preview-count {
-            font-size: 0.75rem;
+        .tool-item-icon { font-size: 1.5rem; width: 40px; text-align: center; }
+        .tool-item-info { flex: 1; min-width: 0; }
+        .tool-item-name { font-weight: 500; font-size: 0.9rem; }
+        .tool-item-file { font-size: 0.75rem; color: var(--text-secondary); }
+
+        .tool-item-actions { display: flex; gap: 4px; }
+        .tool-item-actions button {
+            width: 28px; height: 28px;
+            border-radius: 4px;
+            border: none;
+            cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 0.7rem;
+            transition: all 0.2s ease;
+            background: var(--border);
             color: var(--text-secondary);
-            margin-top: 6px;
+        }
+        .tool-item-actions button:hover { background: var(--accent); color: var(--text-light); }
+        .tool-item-actions button.delete:hover { background: var(--danger); }
+        .tool-item-actions button.move { font-size: 0.6rem; }
+        .tool-item-actions button:disabled { opacity: 0.3; cursor: not-allowed; }
+        .tool-item-actions button:disabled:hover { background: var(--border); color: var(--text-secondary); }
+
+        .data-buttons { display: flex; gap: 8px; margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--border); }
+
+        .save-status { font-size: 0.8rem; color: var(--text-secondary); text-align: center; margin-top: 12px; }
+        .save-status.saved { color: var(--accent); }
+
+        #importInput { display: none; }
+
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
         }
 
-        .space-y > * + * { margin-top: 16px; }
+        .animate-in { animation: fadeInUp 0.5s ease forwards; opacity: 0; }
+
+        @media (max-width: 600px) {
+            .container { padding: 40px 16px; }
+            h1 { font-size: 2rem; }
+            .tools-grid { gap: 16px; }
+            .tool-card { padding: 24px; }
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <div class="card">
-            <div class="header">
-                <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <circle cx="6" cy="6" r="3"/><path d="M8.12 8.12 12 12"/><path d="M20 4 8.12 15.88"/><circle cx="6" cy="18" r="3"/><path d="M14.8 14.8 20 20"/>
-                </svg>
-                <h1>Material Calculator</h1>
+        <div class="header-top">
+            <button class="btn btn-settings" onclick="openPinModal()">⚙️ Settings</button>
+        </div>
+        
+        <header class="animate-in">
+            <h1>Featurepiece Tools</h1>
+            <p class="subtitle">Your workspace for pricing, calculations & more</p>
+        </header>
+
+        <div class="tools-grid" id="toolsGrid"></div>
+
+        <footer class="animate-in" style="animation-delay: 0.3s;">
+            <p class="footer-text">Featurepiece Frames</p>
+        </footer>
+    </div>
+
+    <div class="modal-overlay" id="pinModal">
+        <div class="modal">
+            <h3>Enter PIN</h3>
+            <p style="color: var(--text-secondary); font-size: 0.9rem; text-align: center;">Enter your PIN to access settings</p>
+            <div class="pin-input">
+                <input type="password" maxlength="1" id="pin1" oninput="handlePinInput(this, 'pin2')" onkeydown="handlePinKeydown(event, this, null)">
+                <input type="password" maxlength="1" id="pin2" oninput="handlePinInput(this, 'pin3')" onkeydown="handlePinKeydown(event, this, 'pin1')">
+                <input type="password" maxlength="1" id="pin3" oninput="handlePinInput(this, 'pin4')" onkeydown="handlePinKeydown(event, this, 'pin2')">
+                <input type="password" maxlength="1" id="pin4" oninput="handlePinInput(this, null)" onkeydown="handlePinKeydown(event, this, 'pin3')">
             </div>
-
-            <div class="settings-bar">
-                <div class="setting-group">
-                    <label>Measurement Unit</label>
-                    <div class="toggle-buttons">
-                        <button class="toggle-btn active" id="btn-inches" onclick="setUnit('inches')">Inches</button>
-                        <button class="toggle-btn" id="btn-mm" onclick="setUnit('mm')">Millimetres</button>
-                    </div>
-                </div>
-                <div class="setting-group">
-                    <label>Allow Rotation</label>
-                    <div class="switch-container">
-                        <div class="switch active" id="rotation-switch" onclick="toggleRotation()">
-                            <div class="switch-knob"></div>
-                        </div>
-                        <span class="switch-label" id="rotation-label">Enabled</span>
-                    </div>
-                </div>
+            <p class="pin-error" id="pinError">Incorrect PIN. Please try again.</p>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="closePinModal()">Cancel</button>
+                <button class="btn btn-primary" onclick="verifyPin()">Enter</button>
             </div>
+        </div>
+    </div>
 
-            <div class="main-grid">
-                <div class="space-y">
-                    <div class="panel">
-                        <h2>Mount Specifications</h2>
-                        <div class="input-row">
-                            <div class="input-group">
-                                <label>Width (<span class="unit-label">inches</span>)</label>
-                                <input type="number" id="mount-width" value="10" step="0.1" oninput="calculate()">
-                            </div>
-                            <div class="input-group">
-                                <label>Height (<span class="unit-label">inches</span>)</label>
-                                <input type="number" id="mount-height" value="8" step="0.1" oninput="calculate()">
-                            </div>
-                        </div>
-                        <div class="input-row">
-                            <div class="input-group">
-                                <label>Quantity</label>
-                                <input type="number" id="quantity" value="" step="1" oninput="calculate()">
-                            </div>
-                            <div class="input-group">
-                                <label>Margin (mm)</label>
-                                <input type="number" id="edge-margin" value="17" step="1" oninput="calculate()">
-                            </div>
-                            <div class="input-group">
-                                <label>Gap (mm)</label>
-                                <input type="number" id="gap-between" value="10" step="0.5" oninput="calculate()">
-                            </div>
-                        </div>
+    <div class="modal-overlay" id="settingsModal">
+        <div class="modal">
+            <h3>⚙️ Settings</h3>
+            <div class="settings-section">
+                <h4>Tools</h4>
+                <div class="tools-list" id="toolsList"></div>
+                <button class="btn btn-primary btn-small" onclick="openAddToolModal()">+ Add Tool</button>
+            </div>
+            <div class="data-buttons">
+                <button class="btn btn-secondary btn-small" onclick="exportData()">📁 Export</button>
+                <button class="btn btn-secondary btn-small" onclick="document.getElementById('importInput').click()">📂 Import</button>
+                <input type="file" id="importInput" accept=".json" onchange="importData(event)">
+            </div>
+            <p class="save-status" id="saveStatus">Auto-saved to browser</p>
+            <div class="modal-actions" style="margin-top: 20px;">
+                <button class="btn btn-primary" onclick="closeSettingsModal()">Done</button>
+            </div>
+        </div>
+    </div>
 
-                        <div class="board-section">
-                            <h3>Board</h3>
-                            <div class="input-row">
-                                <div class="input-group">
-                                    <label>Width (mm)</label>
-                                    <input type="number" id="board-width" value="1200" oninput="calculate()">
-                                </div>
-                                <div class="input-group">
-                                    <label>Height (mm)</label>
-                                    <input type="number" id="board-height" value="800" oninput="calculate()">
-                                </div>
-                                <div class="input-group">
-                                    <label>Cost (£) <span style="color:#aaa;font-weight:normal">optional</span></label>
-                                    <input type="number" id="board-cost" value="" step="0.01" placeholder="0.00" oninput="calculate()">
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="panel panel-accent">
-                        <h2>Results</h2>
-                        <div id="results-container">
-                            <p class="empty-state">Enter specifications</p>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="panel">
-                    <h2>Preview</h2>
-                    <div id="preview-container">
-                        <p class="empty-state">Enter specifications to see preview</p>
-                    </div>
-                </div>
+    <div class="modal-overlay" id="toolModal">
+        <div class="modal">
+            <h3 id="toolModalTitle">Add Tool</h3>
+            <div class="form-group">
+                <label>Tool Name</label>
+                <input type="text" id="toolName" placeholder="e.g. Package Pricing">
+            </div>
+            <div class="form-group">
+                <label>Filename</label>
+                <input type="text" id="toolFile" placeholder="e.g. package-pricing.html">
+            </div>
+            <div class="form-group">
+                <label>Icon (emoji)</label>
+                <input type="text" id="toolIcon" placeholder="e.g. 📦" maxlength="4">
+            </div>
+            <div class="form-group">
+                <label>Description</label>
+                <textarea id="toolDescription" placeholder="Brief description of what this tool does"></textarea>
+            </div>
+            <input type="hidden" id="toolEditId">
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="closeToolModal()">Cancel</button>
+                <button class="btn btn-primary" onclick="saveTool()">Save</button>
             </div>
         </div>
     </div>
 
     <script>
-        let currentUnit = 'inches';
-        let allowRotation = true;
-        const INCH_TO_MM = 25.4;
+        const STORAGE_KEY = 'featurepiece-tools-menu';
+        
+        const defaultData = {
+            tools: [
+                { id: 1, name: 'Package Pricing', file: 'package-pricing.html', icon: '📦', description: 'Create and price photography packages with markup calculations, category management, and customer-friendly summaries.' },
+                { id: 2, name: 'Material Calculator', file: 'material-calculator.html', icon: '✂️', description: 'Calculate material usage and optimise cuts for mounts, frames, and other photography materials.' },
+                { id: 3, name: 'Photo Resize Calculator', file: 'photo-resize-calculator.html', icon: '🖼️', description: 'Calculate dimensions and cropping for your prints with DPI conversion and aspect ratio tools.' },
+                { id: 4, name: 'Mount Calculator', file: 'mount-calculator.html', icon: '🖽', description: 'Calculate custom mount pricing with options for double mounts, backing boards, and bulk discounts.' },
+                { id: 5, name: 'Moulding Calculator', file: 'moulding-calculator.html', icon: '📏', description: 'Calculate required moulding length for frames.' }
+            ],
+            pin: '3786',
+            nextToolId: 6
+        };
 
-        function setUnit(unit) {
-            currentUnit = unit;
-            document.getElementById('btn-inches').classList.toggle('active', unit === 'inches');
-            document.getElementById('btn-mm').classList.toggle('active', unit === 'mm');
-            document.querySelectorAll('.unit-label').forEach(el => el.textContent = unit);
-            calculate();
-        }
+        let data = { ...defaultData };
+        let nextToolId = data.nextToolId;
 
-        function toggleRotation() {
-            allowRotation = !allowRotation;
-            const sw = document.getElementById('rotation-switch');
-            sw.classList.toggle('active', allowRotation);
-            document.getElementById('rotation-label').textContent = allowRotation ? 'Enabled' : 'Disabled';
-            calculate();
-        }
-
-        function calculate() {
-            const w = parseFloat(document.getElementById('mount-width').value) || 0;
-            const h = parseFloat(document.getElementById('mount-height').value) || 0;
-            const qty = parseInt(document.getElementById('quantity').value) || 0;
-            const margin = parseFloat(document.getElementById('edge-margin').value) || 0;
-            const gap = parseFloat(document.getElementById('gap-between').value) || 0;
-            const bw = parseFloat(document.getElementById('board-width').value) || 0;
-            const bh = parseFloat(document.getElementById('board-height').value) || 0;
-            const boardCost = parseFloat(document.getElementById('board-cost').value) || 0;
-
-            const resultsContainer = document.getElementById('results-container');
-            const previewContainer = document.getElementById('preview-container');
-
-            if (w <= 0 || h <= 0 || qty <= 0 || bw <= 0 || bh <= 0) {
-                resultsContainer.innerHTML = '<p class="empty-state">Enter specifications</p>';
-                previewContainer.innerHTML = '<p class="empty-state">Enter specifications to see preview</p>';
-                return;
-            }
-
-            const mw = currentUnit === 'inches' ? w * INCH_TO_MM : w;
-            const mh = currentUnit === 'inches' ? h * INCH_TO_MM : h;
-            const uw = bw - 2 * margin;
-            const uh = bh - 2 * margin;
-
-            if (uw <= 0 || uh <= 0) {
-                resultsContainer.innerHTML = '<p class="empty-state">Margins too large for board</p>';
-                previewContainer.innerHTML = '<p class="empty-state">Adjust margins</p>';
-                return;
-            }
-
-            const layouts = [];
-
-            // Normal orientation
-            const nAcross = Math.floor((uw + gap) / (mw + gap));
-            const nDown = Math.floor((uh + gap) / (mh + gap));
-            const nLayout = [];
-            for (let r = 0; r < nDown; r++) {
-                for (let c = 0; c < nAcross; c++) {
-                    nLayout.push({ x: margin + c * (mw + gap), y: margin + r * (mh + gap), width: mw, height: mh, rotated: false });
+        // Load from localStorage on startup
+        function loadFromStorage() {
+            try {
+                const saved = localStorage.getItem(STORAGE_KEY);
+                if (saved) {
+                    const parsed = JSON.parse(saved);
+                    data.tools = parsed.tools || defaultData.tools;
+                    data.pin = parsed.pin || defaultData.pin;
+                    nextToolId = parsed.nextToolId || defaultData.nextToolId;
                 }
+            } catch (e) {
+                console.log('No saved data found, using defaults');
             }
-            layouts.push({ layout: nLayout, perBoard: nLayout.length });
-
-            // Rotated orientation
-            const rAcross = Math.floor((uw + gap) / (mh + gap));
-            const rDown = Math.floor((uh + gap) / (mw + gap));
-            const rLayout = [];
-            for (let r = 0; r < rDown; r++) {
-                for (let c = 0; c < rAcross; c++) {
-                    rLayout.push({ x: margin + c * (mh + gap), y: margin + r * (mw + gap), width: mh, height: mw, rotated: true });
-                }
-            }
-            layouts.push({ layout: rLayout, perBoard: rLayout.length });
-
-            // Mixed layouts if rotation allowed
-            if (allowRotation) {
-                // Mixed 1: Normal primary
-                const mix1Layout = [], mix1Used = [];
-                const mix1Overlaps = (x, y, w, h) => mix1Used.some(r => !(x + w + gap <= r.x || x >= r.x + r.width + gap || y + h + gap <= r.y || y >= r.y + r.height + gap));
-                const mix1TryAdd = (x, y, w, h, rot) => {
-                    if (x >= margin && y >= margin && x + w <= bw - margin && y + h <= bh - margin && !mix1Overlaps(x, y, w, h)) {
-                        const p = { x, y, width: w, height: h, rotated: rot };
-                        mix1Layout.push(p); mix1Used.push(p);
-                        return true;
-                    }
-                    return false;
-                };
-                for (let r = 0; r < nDown; r++) for (let c = 0; c < nAcross; c++) mix1TryAdd(margin + c * (mw + gap), margin + r * (mh + gap), mw, mh, false);
-                const scanStep = Math.min(10, Math.max(1, gap));
-                for (let y = margin; y <= bh - margin - mw; y += scanStep) for (let x = margin; x <= bw - margin - mh; x += scanStep) mix1TryAdd(x, y, mh, mw, true);
-                layouts.push({ layout: mix1Layout, perBoard: mix1Layout.length });
-
-                // Mixed 2: Rotated primary
-                const mix2Layout = [], mix2Used = [];
-                const mix2Overlaps = (x, y, w, h) => mix2Used.some(r => !(x + w + gap <= r.x || x >= r.x + r.width + gap || y + h + gap <= r.y || y >= r.y + r.height + gap));
-                const mix2TryAdd = (x, y, w, h, rot) => {
-                    if (x >= margin && y >= margin && x + w <= bw - margin && y + h <= bh - margin && !mix2Overlaps(x, y, w, h)) {
-                        const p = { x, y, width: w, height: h, rotated: rot };
-                        mix2Layout.push(p); mix2Used.push(p);
-                        return true;
-                    }
-                    return false;
-                };
-                for (let r = 0; r < rDown; r++) for (let c = 0; c < rAcross; c++) mix2TryAdd(margin + c * (mh + gap), margin + r * (mw + gap), mh, mw, true);
-                for (let y = margin; y <= bh - margin - mh; y += scanStep) for (let x = margin; x <= bw - margin - mw; x += scanStep) mix2TryAdd(x, y, mw, mh, false);
-                layouts.push({ layout: mix2Layout, perBoard: mix2Layout.length });
-            }
-
-            const best = allowRotation ? layouts.reduce((a, b) => a.perBoard > b.perBoard ? a : b) : layouts[0];
-
-            if (best.perBoard <= 0) {
-                resultsContainer.innerHTML = '<p class="empty-state">Pieces too large for board</p>';
-                previewContainer.innerHTML = '<p class="empty-state">Adjust dimensions</p>';
-                return;
-            }
-
-            const boardsNeeded = Math.ceil(qty / best.perBoard);
-            const fullBoards = Math.floor(qty / best.perBoard);
-            const remainingPieces = qty % best.perBoard;
-            const totalBoardArea = boardsNeeded * bw * bh;
-            const actualMountArea = qty * mw * mh;
-            const util = ((actualMountArea / totalBoardArea) * 100).toFixed(1);
-            const waste = (100 - parseFloat(util)).toFixed(1);
-            const costPerPiece = boardCost > 0 ? (boardCost / best.perBoard).toFixed(2) : null;
-
-            // Render results
-            let resultsHtml = '<div class="results-grid">';
-            resultsHtml += `<div class="result-card"><div class="result-label">Boards Required</div><div class="result-value">${boardsNeeded}</div></div>`;
-            resultsHtml += `<div class="result-card success"><div class="result-label">Utilisation</div><div class="result-value">${util}%</div></div>`;
-            resultsHtml += `<div class="result-card warning"><div class="result-label">Waste</div><div class="result-value">${waste}%</div><div class="result-note">Includes margins, gaps & offcuts</div></div>`;
-            if (costPerPiece) resultsHtml += `<div class="result-card info"><div class="result-label">Cost per Piece</div><div class="result-value">£${costPerPiece}</div></div>`;
-            resultsHtml += '</div>';
-            resultsContainer.innerHTML = resultsHtml;
-
-            // Render preview
-            let previewHtml = '<div class="space-y">';
-            
-            if (fullBoards > 0) {
-                previewHtml += `<div class="preview-section">
-                    <div class="preview-title">Full Board ${fullBoards > 1 ? `<span class="preview-badge">×${fullBoards}</span>` : ''}</div>
-                    <svg class="preview-svg" viewBox="0 0 ${bw} ${bh}">
-                        <rect x="0" y="0" width="${bw}" height="${bh}" fill="#fafafa" stroke="#2c3e50" stroke-width="3"/>
-                        ${margin > 0 ? `<rect x="${margin}" y="${margin}" width="${bw - 2 * margin}" height="${bh - 2 * margin}" fill="none" stroke="#c0392b" stroke-dasharray="5,5"/>` : ''}
-                        ${best.layout.map(p => `<rect x="${p.x + 1}" y="${p.y + 1}" width="${p.width - 2}" height="${p.height - 2}" fill="${p.rotated ? '#fef3c7' : 'rgba(201,168,124,0.3)'}" stroke="${p.rotated ? '#f59e0b' : '#c9a87c'}" stroke-width="2"/>`).join('')}
-                    </svg>
-                    <div class="preview-count">${best.perBoard} pieces</div>
-                </div>`;
-            }
-
-            if (remainingPieces > 0) {
-                previewHtml += `<div class="preview-section">
-                    <div class="preview-title">${fullBoards > 0 ? 'Partial' : ''} Board (${remainingPieces} of ${best.perBoard} pieces)</div>
-                    <svg class="preview-svg" viewBox="0 0 ${bw} ${bh}">
-                        <rect x="0" y="0" width="${bw}" height="${bh}" fill="#fafafa" stroke="#2c3e50" stroke-width="3"/>
-                        ${margin > 0 ? `<rect x="${margin}" y="${margin}" width="${bw - 2 * margin}" height="${bh - 2 * margin}" fill="none" stroke="#c0392b" stroke-dasharray="5,5"/>` : ''}
-                        ${best.layout.slice(0, remainingPieces).map(p => `<rect x="${p.x + 1}" y="${p.y + 1}" width="${p.width - 2}" height="${p.height - 2}" fill="${p.rotated ? '#fef3c7' : 'rgba(201,168,124,0.3)'}" stroke="${p.rotated ? '#f59e0b' : '#c9a87c'}" stroke-width="2"/>`).join('')}
-                    </svg>
-                    <div class="preview-count">${remainingPieces} pieces</div>
-                </div>`;
-            }
-
-            previewHtml += '</div>';
-            previewContainer.innerHTML = previewHtml;
         }
 
-        calculate();
+        // Save to localStorage
+        function saveToStorage() {
+            try {
+                const saveObj = {
+                    tools: data.tools,
+                    pin: data.pin,
+                    nextToolId: nextToolId
+                };
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(saveObj));
+                updateSaveStatus('✓ Saved');
+            } catch (e) {
+                console.error('Failed to save:', e);
+                updateSaveStatus('Save failed');
+            }
+        }
+
+        function updateSaveStatus(message) {
+            const status = document.getElementById('saveStatus');
+            status.textContent = message;
+            status.classList.add('saved');
+            setTimeout(() => {
+                status.textContent = 'Auto-saved to browser';
+                status.classList.remove('saved');
+            }, 2000);
+        }
+
+        function init() {
+            loadFromStorage();
+            renderToolsGrid();
+        }
+
+        function renderToolsGrid() {
+            const grid = document.getElementById('toolsGrid');
+            if (data.tools.length === 0) {
+                grid.innerHTML = '<div class="empty-state"><div class="empty-state-icon">🔧</div><p>No tools yet. Open Settings to add your first tool.</p></div>';
+                return;
+            }
+            grid.innerHTML = data.tools.map((tool, i) => `
+                <a href="${escapeHtml(tool.file)}" class="tool-card animate-in" style="animation-delay: ${0.1 + i * 0.1}s;">
+                    <div class="tool-icon"><span>${tool.icon}</span></div>
+                    <div class="tool-name">${escapeHtml(tool.name)}</div>
+                    <div class="tool-description">${escapeHtml(tool.description)}</div>
+                    <div class="tool-arrow">→</div>
+                </a>
+            `).join('');
+        }
+
+        function renderToolsList() {
+            const list = document.getElementById('toolsList');
+            if (data.tools.length === 0) {
+                list.innerHTML = '<p style="color: var(--text-secondary); font-size: 0.9rem; padding: 12px;">No tools added yet.</p>';
+                return;
+            }
+            list.innerHTML = data.tools.map((tool, i) => `
+                <div class="tool-item">
+                    <div class="tool-item-icon">${tool.icon}</div>
+                    <div class="tool-item-info">
+                        <div class="tool-item-name">${escapeHtml(tool.name)}</div>
+                        <div class="tool-item-file">${escapeHtml(tool.file)}</div>
+                    </div>
+                    <div class="tool-item-actions">
+                        <button class="move" onclick="moveTool(${tool.id}, -1)" title="Move up" ${i === 0 ? 'disabled' : ''}>▲</button>
+                        <button class="move" onclick="moveTool(${tool.id}, 1)" title="Move down" ${i === data.tools.length - 1 ? 'disabled' : ''}>▼</button>
+                        <button onclick="openEditToolModal(${tool.id})" title="Edit">✏️</button>
+                        <button class="delete" onclick="deleteTool(${tool.id})" title="Delete">🗑️</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function moveTool(toolId, direction) {
+            const index = data.tools.findIndex(t => t.id === toolId);
+            if (index === -1) return;
+            const newIndex = index + direction;
+            if (newIndex < 0 || newIndex >= data.tools.length) return;
+            [data.tools[index], data.tools[newIndex]] = [data.tools[newIndex], data.tools[index]];
+            renderToolsList();
+            saveToStorage();
+        }
+
+        function deleteTool(toolId) {
+            if (!confirm('Remove this tool from the menu?')) return;
+            data.tools = data.tools.filter(t => t.id !== toolId);
+            renderToolsList();
+            saveToStorage();
+        }
+
+        function openPinModal() {
+            document.getElementById('pinModal').classList.add('active');
+            ['pin1','pin2','pin3','pin4'].forEach(id => document.getElementById(id).value = '');
+            document.getElementById('pinError').classList.remove('show');
+            document.getElementById('pin1').focus();
+        }
+
+        function closePinModal() { document.getElementById('pinModal').classList.remove('active'); }
+
+        function handlePinInput(current, nextId) {
+            if (current.value.length === 1 && nextId) document.getElementById(nextId).focus();
+            if (!nextId && current.value.length === 1) verifyPin();
+        }
+
+        function handlePinKeydown(event, current, prevId) {
+            if (event.key === 'Backspace' && current.value === '' && prevId) document.getElementById(prevId).focus();
+        }
+
+        function verifyPin() {
+            const entered = ['pin1','pin2','pin3','pin4'].map(id => document.getElementById(id).value).join('');
+            if (entered === data.pin) { closePinModal(); openSettingsModal(); }
+            else {
+                document.getElementById('pinError').classList.add('show');
+                ['pin1','pin2','pin3','pin4'].forEach(id => document.getElementById(id).value = '');
+                document.getElementById('pin1').focus();
+            }
+        }
+
+        function openSettingsModal() {
+            document.getElementById('settingsModal').classList.add('active');
+            renderToolsList();
+        }
+
+        function closeSettingsModal() {
+            document.getElementById('settingsModal').classList.remove('active');
+            renderToolsGrid();
+        }
+
+        function openAddToolModal() {
+            document.getElementById('toolModalTitle').textContent = 'Add Tool';
+            ['toolName','toolFile','toolIcon','toolDescription','toolEditId'].forEach(id => document.getElementById(id).value = '');
+            document.getElementById('toolModal').classList.add('active');
+        }
+
+        function openEditToolModal(toolId) {
+            const tool = data.tools.find(t => t.id === toolId);
+            if (!tool) return;
+            document.getElementById('toolModalTitle').textContent = 'Edit Tool';
+            document.getElementById('toolName').value = tool.name;
+            document.getElementById('toolFile').value = tool.file;
+            document.getElementById('toolIcon').value = tool.icon;
+            document.getElementById('toolDescription').value = tool.description;
+            document.getElementById('toolEditId').value = toolId;
+            document.getElementById('toolModal').classList.add('active');
+        }
+
+        function closeToolModal() { document.getElementById('toolModal').classList.remove('active'); }
+
+        function saveTool() {
+            const name = document.getElementById('toolName').value.trim();
+            const file = document.getElementById('toolFile').value.trim();
+            const icon = document.getElementById('toolIcon').value.trim() || '🔧';
+            const description = document.getElementById('toolDescription').value.trim();
+            const editId = document.getElementById('toolEditId').value;
+
+            if (!name) { alert('Please enter a tool name'); return; }
+            if (!file) { alert('Please enter a filename'); return; }
+
+            if (editId) {
+                const tool = data.tools.find(t => t.id === parseInt(editId));
+                if (tool) { tool.name = name; tool.file = file; tool.icon = icon; tool.description = description; }
+            } else {
+                data.tools.push({ id: nextToolId++, name, file, icon, description });
+            }
+            closeToolModal();
+            renderToolsList();
+            saveToStorage();
+        }
+
+        function exportData() {
+            const exportObj = { tools: data.tools, pin: data.pin, nextToolId, exportDate: new Date().toISOString() };
+            const blob = new Blob([JSON.stringify(exportObj, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `featurepiece-tools-${new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        function importData(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const obj = JSON.parse(e.target.result);
+                    if (!obj.tools) throw new Error('Invalid');
+                    data.tools = obj.tools;
+                    data.pin = obj.pin || '3786';
+                    nextToolId = obj.nextToolId || Math.max(...data.tools.map(t => t.id), 0) + 1;
+                    renderToolsList();
+                    renderToolsGrid();
+                    saveToStorage();
+                    alert('Imported successfully!');
+                } catch (err) { alert('Error importing file.'); }
+            };
+            reader.readAsText(file);
+            event.target.value = '';
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        ['pinModal','settingsModal','toolModal'].forEach(id => {
+            document.getElementById(id).addEventListener('click', function(e) {
+                if (e.target === this) this.classList.remove('active');
+            });
+        });
+
+        init();
     </script>
 </body>
 </html>
