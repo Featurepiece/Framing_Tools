@@ -51,9 +51,9 @@
             line-height: 1.6;
         }
 
-        .container { max-width: 700px; margin: 0 auto; }
+        .container { max-width: 1000px; margin: 0 auto; }
 
-        header { text-align: center; margin-bottom: 24px; }
+        header { text-align: center; margin-bottom: 20px; }
 
         h1 {
             font-family: 'Playfair Display', serif;
@@ -102,13 +102,26 @@
             background: var(--border);
         }
 
+        .main-layout {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            align-items: start;
+        }
+
+        @media (max-width: 800px) {
+            .main-layout { grid-template-columns: 1fr; }
+        }
+
         .panel {
             background: var(--bg-secondary);
             border-radius: 12px;
             padding: 20px;
             box-shadow: 0 2px 12px var(--shadow);
-            margin-bottom: 20px;
+            margin-bottom: 16px;
         }
+
+        .panel:last-child { margin-bottom: 0; }
 
         .panel h2 {
             font-family: 'Playfair Display', serif;
@@ -190,6 +203,13 @@
             margin-top: 2px;
         }
 
+        .unit-label-fixed {
+            font-size: 0.75rem;
+            color: var(--accent);
+            margin-top: 2px;
+            font-weight: 500;
+        }
+
         .mount-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -218,25 +238,6 @@
             background: var(--border);
         }
 
-        .calculate-btn {
-            width: 100%;
-            padding: 12px;
-            background: var(--accent);
-            color: var(--text-light);
-            border: none;
-            border-radius: 8px;
-            font-family: 'DM Sans', sans-serif;
-            font-size: 1rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: background 0.2s;
-            margin-top: 10px;
-        }
-
-        .calculate-btn:hover {
-            background: var(--accent-hover);
-        }
-
         .results {
             background: var(--bg-primary);
             border-radius: 8px;
@@ -246,7 +247,7 @@
 
         .result-item {
             text-align: center;
-            margin-bottom: 20px;
+            margin-bottom: 16px;
         }
 
         .result-item:last-child {
@@ -262,17 +263,13 @@
 
         .result-value {
             font-family: 'Playfair Display', serif;
-            font-size: 2.5rem;
+            font-size: 2.2rem;
             font-weight: 600;
             color: var(--accent);
         }
 
-        .result-value.secondary {
-            font-size: 1.5rem;
-        }
-
-        .result-unit {
-            font-size: 1rem;
+        .result-value-secondary {
+            font-size: 1.1rem;
             color: var(--text-secondary);
             margin-top: 4px;
         }
@@ -282,6 +279,12 @@
             color: var(--accent);
             font-weight: 600;
             margin-top: 4px;
+        }
+
+        .result-dimensions-secondary {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            margin-top: 2px;
         }
 
         .result-separator {
@@ -301,6 +304,7 @@
             h1 { font-size: 1.75rem; }
             .input-group { flex-direction: column; gap: 10px; }
             .mount-grid { grid-template-columns: 1fr; }
+            .result-value { font-size: 1.8rem; }
         }
     </style>
 </head>
@@ -323,111 +327,117 @@
             </div>
         </div>
 
-        <!-- DIRECT ENTRY MODE -->
-        <div id="direct-mode">
-            <div class="panel">
-                <h2>Glass Size</h2>
-                
-                <div class="input-group">
-                    <div class="input-field">
-                        <label for="glass-width">Width (Glass Size)</label>
-                        <input type="number" id="glass-width" min="0" step="0.1" oninput="calculate()">
-                        <div class="unit-label" id="width-unit">mm</div>
-                    </div>
-                    <div class="input-field">
-                        <label for="glass-height">Height (Glass Size)</label>
-                        <input type="number" id="glass-height" min="0" step="0.1" oninput="calculate()">
-                        <div class="unit-label" id="height-unit">mm</div>
-                    </div>
-                </div>
-
-                <div class="input-field-full">
-                    <label for="moulding-width">Moulding Width</label>
-                    <input type="number" id="moulding-width" min="0" step="0.1" oninput="calculate()">
-                    <div class="unit-label" id="moulding-unit">mm</div>
-                </div>
-            </div>
-        </div>
-
-        <!-- ARTWORK MODE -->
-        <div id="artwork-mode" style="display: none;">
-            <div class="panel">
-                <h2>Artwork Size</h2>
-                
-                <div class="input-group">
-                    <div class="input-field">
-                        <label for="artwork-width">Artwork Width</label>
-                        <input type="number" id="artwork-width" min="0" step="0.1" oninput="calculate()">
-                        <div class="unit-label" id="artwork-width-unit">mm</div>
-                    </div>
-                    <div class="input-field">
-                        <label for="artwork-height">Artwork Height</label>
-                        <input type="number" id="artwork-height" min="0" step="0.1" oninput="calculate()">
-                        <div class="unit-label" id="artwork-height-unit">mm</div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="panel">
-                <h2>Mount Widths</h2>
-
-                <button class="equal-button" onclick="equalizeMount()">⚡ Equal All Sides</button>
-                
-                <div class="mount-grid">
-                    <div class="input-field">
-                        <label for="mount-top">Top</label>
-                        <input type="number" id="mount-top" min="0" step="0.1" oninput="calculate()">
-                        <div class="unit-label" id="mount-top-unit">mm</div>
-                    </div>
-                    <div class="input-field">
-                        <label for="mount-bottom">Bottom</label>
-                        <input type="number" id="mount-bottom" min="0" step="0.1" oninput="calculate()">
-                        <div class="unit-label" id="mount-bottom-unit">mm</div>
-                    </div>
-                    <div class="input-field">
-                        <label for="mount-left">Left</label>
-                        <input type="number" id="mount-left" min="0" step="0.1" oninput="calculate()">
-                        <div class="unit-label" id="mount-left-unit">mm</div>
-                    </div>
-                    <div class="input-field">
-                        <label for="mount-right">Right</label>
-                        <input type="number" id="mount-right" min="0" step="0.1" oninput="calculate()">
-                        <div class="unit-label" id="mount-right-unit">mm</div>
-                    </div>
-                </div>
-
-                <div class="input-field-full">
-                    <label for="moulding-width-artwork">Moulding Width</label>
-                    <input type="number" id="moulding-width-artwork" min="0" step="0.1" oninput="calculate()">
-                    <div class="unit-label" id="moulding-artwork-unit">mm</div>
-                </div>
-            </div>
-        </div>
-
-        <!-- RESULTS -->
-        <div class="panel">
-            <h2>Result</h2>
-            
-            <div id="results-container" style="display: none;">
-                <div class="results">
-                    <div id="glass-size-result" style="display: none;">
-                        <div class="result-item">
-                            <div class="result-label">Calculated Glass Size</div>
-                            <div class="result-dimensions" id="glass-size-dimensions">0 × 0 mm</div>
+        <div class="main-layout">
+            <!-- LEFT COLUMN: Inputs -->
+            <div class="left-column">
+                <!-- DIRECT ENTRY MODE -->
+                <div id="direct-mode">
+                    <div class="panel">
+                        <h2>Glass Size</h2>
+                        
+                        <div class="input-group">
+                            <div class="input-field">
+                                <label for="glass-width">Width</label>
+                                <input type="number" id="glass-width" min="0" step="0.1" oninput="calculate()">
+                                <div class="unit-label">mm</div>
+                            </div>
+                            <div class="input-field">
+                                <label for="glass-height">Height</label>
+                                <input type="number" id="glass-height" min="0" step="0.1" oninput="calculate()">
+                                <div class="unit-label">mm</div>
+                            </div>
                         </div>
-                        <div class="result-separator"></div>
+
+                        <div class="input-field-full">
+                            <label for="moulding-width">Moulding Width (always mm)</label>
+                            <input type="number" id="moulding-width" min="0" step="0.1" oninput="calculate()">
+                            <div class="unit-label-fixed">mm</div>
+                        </div>
                     </div>
-                    
-                    <div class="result-item">
-                        <div class="result-label">Total Moulding Length Required</div>
-                        <div class="result-value" id="total-length">0</div>
-                        <div class="result-unit" id="result-unit">mm</div>
+                </div>
+
+                <!-- ARTWORK MODE -->
+                <div id="artwork-mode" style="display: none;">
+                    <div class="panel">
+                        <h2>Artwork Size</h2>
+                        
+                        <div class="input-group">
+                            <div class="input-field">
+                                <label for="artwork-width">Width</label>
+                                <input type="number" id="artwork-width" min="0" step="0.1" oninput="calculate()">
+                                <div class="unit-label">mm</div>
+                            </div>
+                            <div class="input-field">
+                                <label for="artwork-height">Height</label>
+                                <input type="number" id="artwork-height" min="0" step="0.1" oninput="calculate()">
+                                <div class="unit-label">mm</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="panel">
+                        <h2>Mount Widths</h2>
+
+                        <button class="equal-button" onclick="equalizeMount()">⚡ Equal All Sides</button>
+                        
+                        <div class="mount-grid">
+                            <div class="input-field">
+                                <label for="mount-top">Top</label>
+                                <input type="number" id="mount-top" min="0" step="0.1" oninput="calculate()">
+                                <div class="unit-label">mm</div>
+                            </div>
+                            <div class="input-field">
+                                <label for="mount-bottom">Bottom</label>
+                                <input type="number" id="mount-bottom" min="0" step="0.1" oninput="calculate()">
+                                <div class="unit-label">mm</div>
+                            </div>
+                            <div class="input-field">
+                                <label for="mount-left">Left</label>
+                                <input type="number" id="mount-left" min="0" step="0.1" oninput="calculate()">
+                                <div class="unit-label">mm</div>
+                            </div>
+                            <div class="input-field">
+                                <label for="mount-right">Right</label>
+                                <input type="number" id="mount-right" min="0" step="0.1" oninput="calculate()">
+                                <div class="unit-label">mm</div>
+                            </div>
+                        </div>
+
+                        <div class="input-field-full">
+                            <label for="moulding-width-artwork">Moulding Width (always mm)</label>
+                            <input type="number" id="moulding-width-artwork" min="0" step="0.1" oninput="calculate()">
+                            <div class="unit-label-fixed">mm</div>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <div id="placeholder">
-                <p style="font-size: 0.9rem;">Enter measurements to see results</p>
+            <!-- RIGHT COLUMN: Results -->
+            <div class="panel">
+                <h2>Result</h2>
+                
+                <div id="results-container" style="display: none;">
+                    <div class="results">
+                        <div id="glass-size-result" style="display: none;">
+                            <div class="result-item">
+                                <div class="result-label">Calculated Glass Size</div>
+                                <div class="result-dimensions" id="glass-size-dimensions">0 × 0 mm</div>
+                                <div class="result-dimensions-secondary" id="glass-size-dimensions-secondary"></div>
+                            </div>
+                            <div class="result-separator"></div>
+                        </div>
+                        
+                        <div class="result-item">
+                            <div class="result-label">Total Moulding Length</div>
+                            <div class="result-value" id="total-length">0 mm</div>
+                            <div class="result-value-secondary" id="total-length-secondary"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="placeholder">
+                    <p style="font-size: 0.9rem;">Enter measurements to see results</p>
+                </div>
             </div>
         </div>
     </div>
@@ -435,6 +445,7 @@
     <script>
         let currentUnit = 'mm';
         let currentMode = 'direct';
+        const INCH_TO_MM = 25.4;
 
         function setUnit(unit) {
             currentUnit = unit;
@@ -443,7 +454,6 @@
             
             const unitLabel = unit === 'mm' ? 'mm' : 'inches';
             document.querySelectorAll('.unit-label').forEach(el => el.textContent = unitLabel);
-            document.getElementById('result-unit').textContent = unitLabel;
             
             calculate();
         }
@@ -474,56 +484,101 @@
             document.getElementById('placeholder').style.display = show ? 'none' : 'block';
         }
 
-        function calculate() {
-            const unitLabel = currentUnit === 'mm' ? 'mm' : 'inches';
-            
-            if (currentMode === 'direct') {
-                const width = parseFloat(document.getElementById('glass-width').value);
-                const height = parseFloat(document.getElementById('glass-height').value);
-                const mouldingWidth = parseFloat(document.getElementById('moulding-width').value);
+        function formatLength(valueMM) {
+            // Always show mm as primary when in mm mode
+            // Show both when in inches mode (inches primary, mm secondary)
+            if (currentUnit === 'mm') {
+                return {
+                    primary: `${Math.round(valueMM)} mm`,
+                    secondary: null
+                };
+            } else {
+                const inches = valueMM / INCH_TO_MM;
+                return {
+                    primary: `${inches.toFixed(2)} inches`,
+                    secondary: `(${Math.round(valueMM)} mm)`
+                };
+            }
+        }
 
-                if (!width || !height || !mouldingWidth || width <= 0 || height <= 0 || mouldingWidth <= 0) {
+        function formatDimensions(widthMM, heightMM) {
+            if (currentUnit === 'mm') {
+                return {
+                    primary: `${Math.round(widthMM)} × ${Math.round(heightMM)} mm`,
+                    secondary: null
+                };
+            } else {
+                const widthInch = widthMM / INCH_TO_MM;
+                const heightInch = heightMM / INCH_TO_MM;
+                return {
+                    primary: `${widthInch.toFixed(2)} × ${heightInch.toFixed(2)} inches`,
+                    secondary: `(${Math.round(widthMM)} × ${Math.round(heightMM)} mm)`
+                };
+            }
+        }
+
+        function calculate() {
+            if (currentMode === 'direct') {
+                let width = parseFloat(document.getElementById('glass-width').value);
+                let height = parseFloat(document.getElementById('glass-height').value);
+                let mouldingWidthMM = parseFloat(document.getElementById('moulding-width').value); // Always mm
+
+                if (!width || !height || !mouldingWidthMM || width <= 0 || height <= 0 || mouldingWidthMM <= 0) {
                     showResults(false);
                     return;
                 }
 
-                const totalLength = (height + width) * 2 + (mouldingWidth * 8);
-                const formattedResult = currentUnit === 'mm' ? Math.round(totalLength).toString() : totalLength.toFixed(2);
+                // Convert dimensions to mm if in inches (but NOT moulding width)
+                let widthMM = currentUnit === 'inch' ? width * INCH_TO_MM : width;
+                let heightMM = currentUnit === 'inch' ? height * INCH_TO_MM : height;
+
+                const totalLengthMM = (heightMM + widthMM) * 2 + (mouldingWidthMM * 8);
+                const formatted = formatLength(totalLengthMM);
 
                 document.getElementById('glass-size-result').style.display = 'none';
-                document.getElementById('total-length').textContent = formattedResult;
-                document.getElementById('result-unit').textContent = unitLabel;
+                document.getElementById('total-length').textContent = formatted.primary;
+                document.getElementById('total-length-secondary').textContent = formatted.secondary || '';
                 showResults(true);
                 
             } else {
-                const artworkWidth = parseFloat(document.getElementById('artwork-width').value);
-                const artworkHeight = parseFloat(document.getElementById('artwork-height').value);
-                const mountTop = parseFloat(document.getElementById('mount-top').value);
-                const mountBottom = parseFloat(document.getElementById('mount-bottom').value);
-                const mountLeft = parseFloat(document.getElementById('mount-left').value);
-                const mountRight = parseFloat(document.getElementById('mount-right').value);
-                const mouldingWidth = parseFloat(document.getElementById('moulding-width-artwork').value);
+                let artworkWidth = parseFloat(document.getElementById('artwork-width').value);
+                let artworkHeight = parseFloat(document.getElementById('artwork-height').value);
+                let mountTop = parseFloat(document.getElementById('mount-top').value);
+                let mountBottom = parseFloat(document.getElementById('mount-bottom').value);
+                let mountLeft = parseFloat(document.getElementById('mount-left').value);
+                let mountRight = parseFloat(document.getElementById('mount-right').value);
+                let mouldingWidthMM = parseFloat(document.getElementById('moulding-width-artwork').value); // Always mm
 
-                if (!artworkWidth || !artworkHeight || !mouldingWidth || 
-                    artworkWidth <= 0 || artworkHeight <= 0 || mouldingWidth <= 0 ||
+                if (!artworkWidth || !artworkHeight || !mouldingWidthMM || 
+                    artworkWidth <= 0 || artworkHeight <= 0 || mouldingWidthMM <= 0 ||
                     isNaN(mountTop) || isNaN(mountBottom) || isNaN(mountLeft) || isNaN(mountRight) ||
                     mountTop < 0 || mountBottom < 0 || mountLeft < 0 || mountRight < 0) {
                     showResults(false);
                     return;
                 }
 
-                const glassWidth = artworkWidth + mountLeft + mountRight;
-                const glassHeight = artworkHeight + mountTop + mountBottom;
-                const totalLength = (glassHeight + glassWidth) * 2 + (mouldingWidth * 8);
+                // Convert to mm if in inches (but NOT moulding width)
+                if (currentUnit === 'inch') {
+                    artworkWidth *= INCH_TO_MM;
+                    artworkHeight *= INCH_TO_MM;
+                    mountTop *= INCH_TO_MM;
+                    mountBottom *= INCH_TO_MM;
+                    mountLeft *= INCH_TO_MM;
+                    mountRight *= INCH_TO_MM;
+                }
 
-                const formattedGlassWidth = currentUnit === 'mm' ? Math.round(glassWidth) : glassWidth.toFixed(2);
-                const formattedGlassHeight = currentUnit === 'mm' ? Math.round(glassHeight) : glassHeight.toFixed(2);
-                const formattedLength = currentUnit === 'mm' ? Math.round(totalLength).toString() : totalLength.toFixed(2);
+                const glassWidthMM = artworkWidth + mountLeft + mountRight;
+                const glassHeightMM = artworkHeight + mountTop + mountBottom;
+                const totalLengthMM = (glassHeightMM + glassWidthMM) * 2 + (mouldingWidthMM * 8);
 
-                document.getElementById('glass-size-dimensions').textContent = `${formattedGlassWidth} × ${formattedGlassHeight} ${unitLabel}`;
+                const formattedDims = formatDimensions(glassWidthMM, glassHeightMM);
+                const formattedLength = formatLength(totalLengthMM);
+
+                document.getElementById('glass-size-dimensions').textContent = formattedDims.primary;
+                document.getElementById('glass-size-dimensions-secondary').textContent = formattedDims.secondary || '';
                 document.getElementById('glass-size-result').style.display = 'block';
-                document.getElementById('total-length').textContent = formattedLength;
-                document.getElementById('result-unit').textContent = unitLabel;
+                document.getElementById('total-length').textContent = formattedLength.primary;
+                document.getElementById('total-length-secondary').textContent = formattedLength.secondary || '';
                 showResults(true);
             }
         }
