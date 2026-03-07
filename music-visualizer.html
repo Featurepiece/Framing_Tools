@@ -1,0 +1,904 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Music Visualizer</title>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;700&family=Playfair+Display:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-bg: #0a0a0f;
+            --control-bg: rgba(20, 20, 30, 0.85);
+            --accent: #c9a87c;
+            --accent-glow: rgba(201, 168, 124, 0.4);
+            --text: #e8e4df;
+            --text-dim: rgba(232, 228, 223, 0.5);
+            --border: rgba(201, 168, 124, 0.2);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: var(--primary-bg);
+            overflow: hidden;
+            font-family: 'DM Sans', sans-serif;
+            color: var(--text);
+            cursor: none;
+        }
+
+        body.show-cursor {
+            cursor: default;
+        }
+
+        canvas {
+            display: block;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Controls overlay */
+        .controls {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 14px 24px;
+            background: var(--control-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            transition: opacity 0.5s ease, transform 0.5s ease;
+            z-index: 100;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+        }
+
+        .controls.hidden {
+            opacity: 0;
+            transform: translateX(-50%) translateY(20px);
+            pointer-events: none;
+        }
+
+        .controls .divider {
+            width: 1px;
+            height: 28px;
+            background: var(--border);
+        }
+
+        /* Buttons */
+        .ctrl-btn {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 8px 14px;
+            border-radius: 10px;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+            letter-spacing: 0.3px;
+        }
+
+        .ctrl-btn:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+            box-shadow: 0 0 12px var(--accent-glow);
+        }
+
+        .ctrl-btn.active {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: #1a1a2e;
+            font-weight: 700;
+        }
+
+        .ctrl-btn.active:hover {
+            box-shadow: 0 0 16px var(--accent-glow);
+        }
+
+        /* Mode selector */
+        .mode-btns {
+            display: flex;
+            gap: 6px;
+        }
+
+        .mode-btn {
+            width: 36px;
+            height: 36px;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 15px;
+            border-radius: 10px;
+        }
+
+        /* Source buttons */
+        .source-btns {
+            display: flex;
+            gap: 6px;
+        }
+
+        /* File input */
+        .file-input {
+            display: none;
+        }
+
+        /* Now playing */
+        .now-playing {
+            font-size: 12px;
+            color: var(--text-dim);
+            max-width: 140px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        /* Title overlay */
+        .title-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 50;
+            background: radial-gradient(ellipse at center, rgba(10, 10, 15, 0.7) 0%, var(--primary-bg) 70%);
+            transition: opacity 0.8s ease;
+        }
+
+        .title-overlay.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .title-overlay h1 {
+            font-family: 'Playfair Display', serif;
+            font-size: clamp(32px, 6vw, 64px);
+            font-weight: 300;
+            letter-spacing: 6px;
+            text-transform: uppercase;
+            color: var(--accent);
+            margin-bottom: 12px;
+            text-shadow: 0 0 40px var(--accent-glow);
+        }
+
+        .title-overlay p {
+            font-size: 15px;
+            color: var(--text-dim);
+            letter-spacing: 2px;
+        }
+
+        .title-overlay .start-hint {
+            margin-top: 48px;
+            font-size: 13px;
+            color: var(--text-dim);
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 0.4; }
+            50% { opacity: 1; }
+        }
+
+        /* Fullscreen button */
+        .fs-btn {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 100;
+            width: 40px;
+            height: 40px;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            transition: opacity 0.5s ease;
+        }
+
+        .fs-btn.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        /* Keyboard hints */
+        .key-hint {
+            font-size: 9px;
+            color: var(--text-dim);
+            position: absolute;
+            bottom: 2px;
+            right: 4px;
+            pointer-events: none;
+        }
+
+        /* Mobile adjustments */
+        @media (max-width: 640px) {
+            .controls {
+                bottom: 16px;
+                padding: 10px 14px;
+                gap: 8px;
+                border-radius: 14px;
+                max-width: calc(100% - 24px);
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+
+            .mode-btn {
+                width: 32px;
+                height: 32px;
+                font-size: 13px;
+            }
+
+            .ctrl-btn {
+                padding: 6px 10px;
+                font-size: 12px;
+            }
+
+            .now-playing {
+                max-width: 100px;
+                font-size: 11px;
+            }
+
+            .divider {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+
+    <!-- Title screen -->
+    <div class="title-overlay" id="titleOverlay">
+        <h1>Visualizer</h1>
+        <p>audio-reactive visuals</p>
+        <div class="start-hint">select a source below to begin</div>
+    </div>
+
+    <!-- Fullscreen button -->
+    <button class="ctrl-btn fs-btn" id="fsBtn" title="Fullscreen (F)">&#x26F6;</button>
+
+    <!-- Controls -->
+    <div class="controls" id="controls">
+        <!-- Source selection -->
+        <div class="source-btns">
+            <button class="ctrl-btn" id="micBtn" title="Use microphone">&#x1F399; Mic</button>
+            <button class="ctrl-btn" id="fileBtn" title="Upload audio file">&#x1F4C1; File</button>
+        </div>
+        <input type="file" class="file-input" id="fileInput" accept="audio/*">
+
+        <div class="divider"></div>
+
+        <!-- Mode selection -->
+        <div class="mode-btns">
+            <button class="ctrl-btn mode-btn active" data-mode="0" title="Geometric">&#x25C7;</button>
+            <button class="ctrl-btn mode-btn" data-mode="1" title="Organic">&#x223F;</button>
+            <button class="ctrl-btn mode-btn" data-mode="2" title="Cosmic">&#x2726;</button>
+            <button class="ctrl-btn mode-btn" data-mode="3" title="Minimal">&#x25CB;</button>
+        </div>
+
+        <div class="divider"></div>
+
+        <!-- Now playing -->
+        <div class="now-playing" id="nowPlaying">No audio</div>
+    </div>
+
+    <script>
+    (() => {
+        // ==================== SETUP ====================
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const controls = document.getElementById('controls');
+        const titleOverlay = document.getElementById('titleOverlay');
+        const nowPlaying = document.getElementById('nowPlaying');
+        const micBtn = document.getElementById('micBtn');
+        const fileBtn = document.getElementById('fileBtn');
+        const fileInput = document.getElementById('fileInput');
+        const fsBtn = document.getElementById('fsBtn');
+        const modeBtns = document.querySelectorAll('.mode-btn');
+
+        let width, height, cx, cy;
+        let audioCtx, analyser, freqData, timeData, source;
+        let currentMode = 0;
+        let isActive = false;
+        let hideTimer = null;
+        let animId = null;
+        let time = 0;
+        let micStream = null;
+        let audioElement = null;
+
+        // Resize canvas
+        function resize() {
+            const dpr = window.devicePixelRatio || 1;
+            width = window.innerWidth;
+            height = window.innerHeight;
+            canvas.width = width * dpr;
+            canvas.height = height * dpr;
+            canvas.style.width = width + 'px';
+            canvas.style.height = height + 'px';
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+            cx = width / 2;
+            cy = height / 2;
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        // ==================== AUDIO ====================
+        function initAudio() {
+            if (audioCtx) return;
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            analyser = audioCtx.createAnalyser();
+            analyser.fftSize = 2048;
+            analyser.smoothingTimeConstant = 0.82;
+            freqData = new Uint8Array(analyser.frequencyBinCount);
+            timeData = new Uint8Array(analyser.fftSize);
+        }
+
+        function disconnectSource() {
+            if (source) {
+                try { source.disconnect(); } catch(e) {}
+                source = null;
+            }
+            if (micStream) {
+                micStream.getTracks().forEach(t => t.stop());
+                micStream = null;
+            }
+            if (audioElement) {
+                audioElement.pause();
+                audioElement = null;
+            }
+        }
+
+        // Microphone
+        async function startMic() {
+            initAudio();
+            disconnectSource();
+            try {
+                micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                source = audioCtx.createMediaStreamSource(micStream);
+                source.connect(analyser);
+                micBtn.classList.add('active');
+                fileBtn.classList.remove('active');
+                nowPlaying.textContent = 'Listening...';
+                activate();
+            } catch(e) {
+                nowPlaying.textContent = 'Mic denied';
+            }
+        }
+
+        // File upload
+        function loadFile(file) {
+            initAudio();
+            disconnectSource();
+            audioElement = new Audio();
+            audioElement.crossOrigin = 'anonymous';
+            audioElement.src = URL.createObjectURL(file);
+            source = audioCtx.createMediaElementSource(audioElement);
+            source.connect(analyser);
+            analyser.connect(audioCtx.destination);
+            audioElement.play();
+            fileBtn.classList.add('active');
+            micBtn.classList.remove('active');
+            const name = file.name.replace(/\.[^/.]+$/, '');
+            nowPlaying.textContent = name;
+            activate();
+        }
+
+        function activate() {
+            if (!isActive) {
+                isActive = true;
+                titleOverlay.classList.add('hidden');
+                if (!animId) animate();
+            }
+            if (audioCtx && audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+        }
+
+        // ==================== HELPERS ====================
+        function getBand(data, start, end) {
+            let sum = 0;
+            const s = Math.floor(start * data.length);
+            const e = Math.floor(end * data.length);
+            for (let i = s; i < e; i++) sum += data[i];
+            return sum / (e - s) / 255;
+        }
+
+        function getEnergy() {
+            let sum = 0;
+            for (let i = 0; i < freqData.length; i++) sum += freqData[i];
+            return sum / freqData.length / 255;
+        }
+
+        function lerp(a, b, t) { return a + (b - a) * t; }
+
+        function hsl(h, s, l, a) {
+            return `hsla(${h % 360}, ${s}%, ${l}%, ${a || 1})`;
+        }
+
+        // Simple noise function
+        function noise(x, y) {
+            const n = Math.sin(x * 12.9898 + y * 78.233) * 43758.5453;
+            return n - Math.floor(n);
+        }
+
+        function smoothNoise(x, y) {
+            const ix = Math.floor(x), iy = Math.floor(y);
+            const fx = x - ix, fy = y - iy;
+            const sx = fx * fx * (3 - 2 * fx);
+            const sy = fy * fy * (3 - 2 * fy);
+            const n00 = noise(ix, iy);
+            const n10 = noise(ix + 1, iy);
+            const n01 = noise(ix, iy + 1);
+            const n11 = noise(ix + 1, iy + 1);
+            return lerp(lerp(n00, n10, sx), lerp(n01, n11, sx), sy);
+        }
+
+        // ==================== VISUALIZERS ====================
+
+        // Mode 0: Geometric / Abstract
+        function drawGeometric() {
+            const bass = getBand(freqData, 0, 0.1);
+            const mid = getBand(freqData, 0.1, 0.4);
+            const treble = getBand(freqData, 0.4, 1.0);
+            const energy = getEnergy();
+
+            // Background fade
+            ctx.fillStyle = `rgba(6, 6, 12, 0.15)`;
+            ctx.fillRect(0, 0, width, height);
+
+            // Radial lines from center
+            const numLines = 64;
+            for (let i = 0; i < numLines; i++) {
+                const angle = (i / numLines) * Math.PI * 2 + time * 0.2;
+                const freqIdx = Math.floor((i / numLines) * freqData.length * 0.5);
+                const val = freqData[freqIdx] / 255;
+                const len = 60 + val * Math.min(width, height) * 0.4;
+
+                ctx.beginPath();
+                ctx.moveTo(cx, cy);
+                ctx.lineTo(
+                    cx + Math.cos(angle) * len,
+                    cy + Math.sin(angle) * len
+                );
+                const hue = (i / numLines) * 360 + time * 30;
+                ctx.strokeStyle = hsl(hue, 80, 50 + val * 40, 0.3 + val * 0.5);
+                ctx.lineWidth = 1 + val * 3;
+                ctx.stroke();
+            }
+
+            // Concentric polygons
+            const shapes = 6;
+            for (let s = 0; s < shapes; s++) {
+                const sides = 3 + s;
+                const baseRadius = 40 + s * 50;
+                const pulse = bass * 40 + mid * 20;
+                const radius = baseRadius + pulse;
+                const rot = time * (0.3 + s * 0.1) * (s % 2 ? 1 : -1);
+
+                ctx.beginPath();
+                for (let i = 0; i <= sides; i++) {
+                    const angle = (i / sides) * Math.PI * 2 + rot;
+                    const r = radius + Math.sin(time * 2 + i) * treble * 20;
+                    const x = cx + Math.cos(angle) * r;
+                    const y = cy + Math.sin(angle) * r;
+                    if (i === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                }
+                ctx.closePath();
+                const hue = 30 + s * 40 + time * 20;
+                ctx.strokeStyle = hsl(hue, 70, 55, 0.4 + energy * 0.4);
+                ctx.lineWidth = 1.5 + bass * 3;
+                ctx.stroke();
+            }
+
+            // Center glow
+            const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, 80 + bass * 100);
+            grad.addColorStop(0, hsl(30 + time * 15, 80, 60, 0.3 * energy));
+            grad.addColorStop(1, 'transparent');
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, 0, width, height);
+        }
+
+        // Mode 1: Organic / Fluid
+        let blobs = [];
+        function initBlobs() {
+            blobs = [];
+            for (let i = 0; i < 8; i++) {
+                blobs.push({
+                    x: Math.random() * width,
+                    y: Math.random() * height,
+                    vx: (Math.random() - 0.5) * 2,
+                    vy: (Math.random() - 0.5) * 2,
+                    radius: 80 + Math.random() * 120,
+                    hue: Math.random() * 360,
+                    phase: Math.random() * Math.PI * 2
+                });
+            }
+        }
+        initBlobs();
+
+        function drawOrganic() {
+            const bass = getBand(freqData, 0, 0.1);
+            const mid = getBand(freqData, 0.1, 0.4);
+            const treble = getBand(freqData, 0.4, 1.0);
+            const energy = getEnergy();
+
+            // Slow fade
+            ctx.fillStyle = `rgba(8, 4, 16, 0.08)`;
+            ctx.fillRect(0, 0, width, height);
+
+            // Update and draw blobs
+            for (let i = 0; i < blobs.length; i++) {
+                const b = blobs[i];
+                const nv = smoothNoise(b.x * 0.003 + time * 0.3, b.y * 0.003);
+                b.vx += Math.cos(nv * Math.PI * 4) * 0.3 * (1 + bass * 3);
+                b.vy += Math.sin(nv * Math.PI * 4) * 0.3 * (1 + bass * 3);
+                b.vx *= 0.96;
+                b.vy *= 0.96;
+                b.x += b.vx;
+                b.y += b.vy;
+
+                // Wrap around
+                if (b.x < -100) b.x = width + 100;
+                if (b.x > width + 100) b.x = -100;
+                if (b.y < -100) b.y = height + 100;
+                if (b.y > height + 100) b.y = -100;
+
+                const r = b.radius * (0.8 + bass * 1.2 + Math.sin(time + b.phase) * 0.3);
+                const grad = ctx.createRadialGradient(b.x, b.y, 0, b.x, b.y, r);
+                b.hue += treble * 2;
+                const alpha = 0.03 + energy * 0.08;
+                grad.addColorStop(0, hsl(b.hue, 80, 55, alpha * 2));
+                grad.addColorStop(0.4, hsl(b.hue + 30, 70, 45, alpha));
+                grad.addColorStop(1, 'transparent');
+
+                ctx.fillStyle = grad;
+                ctx.fillRect(b.x - r, b.y - r, r * 2, r * 2);
+            }
+
+            // Flowing curves
+            const curves = 5;
+            for (let c = 0; c < curves; c++) {
+                ctx.beginPath();
+                const baseY = height * (0.2 + c * 0.15);
+                for (let x = 0; x <= width; x += 4) {
+                    const freqIdx = Math.floor((x / width) * freqData.length * 0.3);
+                    const val = freqData[freqIdx] / 255;
+                    const wave = Math.sin(x * 0.008 + time * (1 + c * 0.3)) * 30 * (1 + mid);
+                    const wave2 = Math.cos(x * 0.005 + time * 0.7 + c) * 20 * bass;
+                    const y = baseY + wave + wave2 + val * 60;
+                    if (x === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                }
+                const hue = 260 + c * 30 + time * 10;
+                ctx.strokeStyle = hsl(hue, 70, 55, 0.15 + mid * 0.3);
+                ctx.lineWidth = 2 + bass * 4;
+                ctx.stroke();
+            }
+        }
+
+        // Mode 2: Space / Cosmic
+        let stars = [];
+        function initStars() {
+            stars = [];
+            for (let i = 0; i < 400; i++) {
+                stars.push({
+                    x: Math.random() * width,
+                    y: Math.random() * height,
+                    z: Math.random() * 3,
+                    brightness: 0.3 + Math.random() * 0.7,
+                    hue: 200 + Math.random() * 60
+                });
+            }
+        }
+        initStars();
+
+        let particles = [];
+        function spawnParticles(count, energy) {
+            for (let i = 0; i < count; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const speed = 1 + Math.random() * 4 * energy;
+                particles.push({
+                    x: cx, y: cy,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed,
+                    life: 1,
+                    decay: 0.005 + Math.random() * 0.015,
+                    hue: 200 + Math.random() * 120,
+                    size: 1 + Math.random() * 2
+                });
+            }
+        }
+
+        function drawCosmic() {
+            const bass = getBand(freqData, 0, 0.1);
+            const mid = getBand(freqData, 0.1, 0.4);
+            const treble = getBand(freqData, 0.4, 1.0);
+            const energy = getEnergy();
+
+            // Deep space background
+            ctx.fillStyle = `rgba(2, 2, 8, 0.12)`;
+            ctx.fillRect(0, 0, width, height);
+
+            // Nebula glow
+            const nebulaColors = [
+                { x: cx - 200, y: cy - 100, hue: 280, sat: 70 },
+                { x: cx + 150, y: cy + 80, hue: 220, sat: 60 },
+                { x: cx, y: cy - 200, hue: 340, sat: 50 }
+            ];
+            for (const n of nebulaColors) {
+                const r = 200 + bass * 150;
+                const grad = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, r);
+                grad.addColorStop(0, hsl(n.hue + time * 5, n.sat, 40, 0.02 + energy * 0.03));
+                grad.addColorStop(1, 'transparent');
+                ctx.fillStyle = grad;
+                ctx.fillRect(0, 0, width, height);
+            }
+
+            // Stars
+            if (stars.length === 0 || stars[0].x > width + 50) initStars();
+            for (const s of stars) {
+                s.x -= s.z * (0.5 + bass * 3);
+                if (s.x < -5) { s.x = width + 5; s.y = Math.random() * height; }
+
+                const twinkle = 0.5 + 0.5 * Math.sin(time * 3 + s.x * 0.01);
+                const alpha = s.brightness * twinkle * (0.4 + energy * 0.6);
+                const size = s.z * (0.8 + bass * 1.5);
+
+                ctx.beginPath();
+                ctx.arc(s.x, s.y, size, 0, Math.PI * 2);
+                ctx.fillStyle = hsl(s.hue, 60, 80, alpha);
+                ctx.fill();
+            }
+
+            // Spawn particles on beats
+            if (bass > 0.6) spawnParticles(Math.floor(bass * 8), energy);
+
+            // Update particles
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                p.vx *= 0.995;
+                p.vy *= 0.995;
+                p.life -= p.decay;
+
+                if (p.life <= 0) {
+                    particles.splice(i, 1);
+                    continue;
+                }
+
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI * 2);
+                ctx.fillStyle = hsl(p.hue, 80, 65, p.life * 0.8);
+                ctx.fill();
+            }
+
+            // Keep particles manageable
+            if (particles.length > 500) particles.splice(0, 100);
+
+            // Central star/sun
+            const sunR = 3 + bass * 15;
+            const sunGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, sunR * 4);
+            sunGrad.addColorStop(0, hsl(40, 100, 90, 0.4 + energy * 0.3));
+            sunGrad.addColorStop(0.3, hsl(30, 80, 60, 0.15));
+            sunGrad.addColorStop(1, 'transparent');
+            ctx.fillStyle = sunGrad;
+            ctx.beginPath();
+            ctx.arc(cx, cy, sunR * 4, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // Mode 3: Minimalist / Elegant
+        function drawMinimal() {
+            const bass = getBand(freqData, 0, 0.1);
+            const mid = getBand(freqData, 0.1, 0.4);
+            const treble = getBand(freqData, 0.4, 1.0);
+            const energy = getEnergy();
+
+            // Clean dark background
+            ctx.fillStyle = `rgba(8, 8, 14, 0.1)`;
+            ctx.fillRect(0, 0, width, height);
+
+            // Subtle background gradient shift
+            const bgGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.max(width, height) * 0.6);
+            const bgHue = 220 + Math.sin(time * 0.2) * 20;
+            bgGrad.addColorStop(0, hsl(bgHue, 30, 10, 0.03));
+            bgGrad.addColorStop(1, 'transparent');
+            ctx.fillStyle = bgGrad;
+            ctx.fillRect(0, 0, width, height);
+
+            // Circular waveform
+            const waveRadius = Math.min(width, height) * 0.25;
+            ctx.beginPath();
+            const points = timeData.length;
+            for (let i = 0; i < points; i++) {
+                const angle = (i / points) * Math.PI * 2 - Math.PI / 2;
+                const val = (timeData[i] - 128) / 128;
+                const r = waveRadius + val * 60 * (1 + bass * 0.5);
+                const x = cx + Math.cos(angle) * r;
+                const y = cy + Math.sin(angle) * r;
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.closePath();
+            ctx.strokeStyle = hsl(30, 60, 70, 0.3 + energy * 0.4);
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+
+            // Glowing rings
+            const numRings = 4;
+            for (let r = 0; r < numRings; r++) {
+                const baseR = waveRadius * (0.5 + r * 0.35);
+                const pulse = r === 0 ? bass : r === 1 ? mid : treble;
+                const radius = baseR + pulse * 30;
+                const ringAlpha = 0.05 + pulse * 0.15;
+
+                ctx.beginPath();
+                ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+                const ringHue = 30 + r * 15;
+                ctx.strokeStyle = hsl(ringHue, 50, 65, ringAlpha);
+                ctx.lineWidth = 1 + pulse * 2;
+                ctx.stroke();
+
+                // Ring glow
+                const glowGrad = ctx.createRadialGradient(cx, cy, radius - 10, cx, cy, radius + 10);
+                glowGrad.addColorStop(0, 'transparent');
+                glowGrad.addColorStop(0.5, hsl(ringHue, 50, 65, ringAlpha * 0.3));
+                glowGrad.addColorStop(1, 'transparent');
+                ctx.strokeStyle = glowGrad;
+                ctx.lineWidth = 20;
+                ctx.stroke();
+            }
+
+            // Floating dots along the waveform
+            const dotCount = 32;
+            for (let i = 0; i < dotCount; i++) {
+                const angle = (i / dotCount) * Math.PI * 2 + time * 0.3;
+                const freqIdx = Math.floor((i / dotCount) * freqData.length * 0.3);
+                const val = freqData[freqIdx] / 255;
+                const r = waveRadius + val * 40;
+                const x = cx + Math.cos(angle) * r;
+                const y = cy + Math.sin(angle) * r;
+                const dotSize = 2 + val * 4;
+
+                ctx.beginPath();
+                ctx.arc(x, y, dotSize, 0, Math.PI * 2);
+                ctx.fillStyle = hsl(30, 60, 70, 0.3 + val * 0.5);
+                ctx.fill();
+            }
+        }
+
+        // ==================== ANIMATION LOOP ====================
+        const drawFns = [drawGeometric, drawOrganic, drawCosmic, drawMinimal];
+
+        function animate() {
+            analyser.getByteFrequencyData(freqData);
+            analyser.getByteTimeDomainData(timeData);
+
+            time += 0.016;
+            drawFns[currentMode]();
+
+            animId = requestAnimationFrame(animate);
+        }
+
+        // ==================== UI EVENTS ====================
+        // Mode buttons
+        modeBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                currentMode = parseInt(btn.dataset.mode);
+                modeBtns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                // Clear canvas on mode switch
+                ctx.fillStyle = 'rgba(6, 6, 12, 1)';
+                ctx.fillRect(0, 0, width, height);
+            });
+        });
+
+        // Mic button
+        micBtn.addEventListener('click', startMic);
+
+        // File button
+        fileBtn.addEventListener('click', () => fileInput.click());
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                loadFile(e.target.files[0]);
+            }
+        });
+
+        // Fullscreen
+        fsBtn.addEventListener('click', toggleFullscreen);
+        function toggleFullscreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen();
+            } else {
+                document.exitFullscreen();
+            }
+        }
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            if (e.key >= '1' && e.key <= '4') {
+                const mode = parseInt(e.key) - 1;
+                currentMode = mode;
+                modeBtns.forEach(b => b.classList.remove('active'));
+                modeBtns[mode].classList.add('active');
+                ctx.fillStyle = 'rgba(6, 6, 12, 1)';
+                ctx.fillRect(0, 0, width, height);
+            }
+            if (e.key === 'f' || e.key === 'F') toggleFullscreen();
+            if (e.key === ' ') {
+                e.preventDefault();
+                if (audioElement) {
+                    if (audioElement.paused) audioElement.play();
+                    else audioElement.pause();
+                }
+            }
+        });
+
+        // Auto-hide controls
+        function showControls() {
+            controls.classList.remove('hidden');
+            fsBtn.classList.remove('hidden');
+            document.body.classList.add('show-cursor');
+            clearTimeout(hideTimer);
+            hideTimer = setTimeout(() => {
+                if (isActive) {
+                    controls.classList.add('hidden');
+                    fsBtn.classList.add('hidden');
+                    document.body.classList.remove('show-cursor');
+                }
+            }, 3000);
+        }
+
+        document.addEventListener('mousemove', showControls);
+        document.addEventListener('touchstart', showControls);
+
+        // Handle window resize for stars/blobs
+        window.addEventListener('resize', () => {
+            initStars();
+            initBlobs();
+        });
+
+        // Initial idle animation (subtle background)
+        function idleAnimate() {
+            if (isActive) return;
+            time += 0.016;
+            ctx.fillStyle = `rgba(6, 6, 12, 0.05)`;
+            ctx.fillRect(0, 0, width, height);
+
+            // Subtle floating particles
+            for (let i = 0; i < 20; i++) {
+                const x = cx + Math.cos(time * 0.3 + i * 1.2) * (100 + i * 15);
+                const y = cy + Math.sin(time * 0.4 + i * 0.9) * (80 + i * 12);
+                const alpha = 0.03 + 0.02 * Math.sin(time + i);
+                ctx.beginPath();
+                ctx.arc(x, y, 2, 0, Math.PI * 2);
+                ctx.fillStyle = hsl(30, 50, 60, alpha);
+                ctx.fill();
+            }
+
+            requestAnimationFrame(idleAnimate);
+        }
+        idleAnimate();
+    })();
+    </script>
+</body>
+</html>
