@@ -287,7 +287,7 @@
 
         <!-- Mode selection -->
         <div class="mode-btns">
-            <button class="ctrl-btn mode-btn active" data-mode="0" title="Geometric">&#x25C7;</button>
+            <button class="ctrl-btn mode-btn active" data-mode="0" title="Pixel Grid">&#x25A6;</button>
             <button class="ctrl-btn mode-btn" data-mode="1" title="Organic">&#x223F;</button>
             <button class="ctrl-btn mode-btn" data-mode="2" title="Cosmic">&#x2726;</button>
             <button class="ctrl-btn mode-btn" data-mode="3" title="Minimal">&#x25CB;</button>
@@ -537,8 +537,38 @@
 
         // ==================== VISUALIZERS ====================
 
-        // Mode 0: KALEIDOSCOPE EXPLOSION
-        let geoTrails = [];
+        // Mode 0: LED PIXEL GRID
+        const GRID_COLS = 32;
+        const GRID_ROWS = 16;
+        let pixelGrid = [];
+        let pixelTargets = [];
+        function initPixelGrid() {
+            pixelGrid = [];
+            pixelTargets = [];
+            for (let r = 0; r < GRID_ROWS; r++) {
+                pixelGrid[r] = [];
+                pixelTargets[r] = [];
+                for (let c = 0; c < GRID_COLS; c++) {
+                    pixelGrid[r][c] = { hue: 0, sat: 100, lit: 0, alpha: 0 };
+                    pixelTargets[r][c] = { hue: 0, sat: 100, lit: 0, alpha: 0 };
+                }
+            }
+        }
+        initPixelGrid();
+
+        // Palette: bright LED colors like the hardware unit
+        const ledColors = [
+            { h: 0, s: 100, l: 50 },     // red
+            { h: 20, s: 100, l: 55 },     // orange
+            { h: 45, s: 100, l: 55 },     // amber/yellow
+            { h: 120, s: 100, l: 45 },    // green
+            { h: 200, s: 100, l: 55 },    // blue
+            { h: 270, s: 100, l: 60 },    // purple
+            { h: 320, s: 100, l: 55 },    // pink
+            { h: 180, s: 100, l: 50 },    // cyan
+            { h: 60, s: 80, l: 65 },      // warm white
+        ];
+
         function drawGeometric() {
             const bass = getBand(freqData, 0, 0.08);
             const mid = getBand(freqData, 0.08, 0.35);
@@ -546,109 +576,148 @@
             const energy = getEnergy();
             const isBeat = detectBeat(bass, mid, treble, energy);
 
-            // Fade with color tint
-            ctx.fillStyle = `rgba(2, 2, 8, ${0.08 + beatFlash * 0.05})`;
+            // Black background — clean like a real LED display
+            ctx.fillStyle = '#050508';
             ctx.fillRect(0, 0, width, height);
 
-            // Beat flash overlay
-            if (beatFlash > 0.3) {
-                const flashGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.max(width, height) * 0.7);
-                const flashHue = beatCount * 60;
-                flashGrad.addColorStop(0, hsl(flashHue, 100, 80, beatFlash * 0.15));
-                flashGrad.addColorStop(0.5, hsl(flashHue + 40, 100, 50, beatFlash * 0.05));
-                flashGrad.addColorStop(1, 'transparent');
-                ctx.fillStyle = flashGrad;
-                ctx.fillRect(0, 0, width, height);
+            // Calculate pixel sizing to fill the screen nicely
+            const gap = 2;
+            const maxPixelW = (width - gap * (GRID_COLS + 1)) / GRID_COLS;
+            const maxPixelH = (height - gap * (GRID_ROWS + 1)) / GRID_ROWS;
+            const pixelSize = Math.floor(Math.min(maxPixelW, maxPixelH));
+            const totalW = GRID_COLS * (pixelSize + gap) + gap;
+            const totalH = GRID_ROWS * (pixelSize + gap) + gap;
+            const offsetX = (width - totalW) / 2;
+            const offsetY = (height - totalH) / 2;
+            const roundR = Math.max(1, pixelSize * 0.15);
+
+            // === Update pixel targets based on frequency data ===
+
+            // Frequency spectrum columns (bars rising from bottom)
+            for (let c = 0; c < GRID_COLS; c++) {
+                const freqIdx = Math.floor((c / GRID_COLS) * freqData.length * 0.4);
+                const val = freqData[freqIdx] / 255;
+                const barHeight = Math.floor(val * GRID_ROWS);
+
+                // Pick color based on column position
+                const colColor = ledColors[c % ledColors.length];
+                const beatBoost = isBeat ? 0.3 : 0;
+
+                for (let r = 0; r < GRID_ROWS; r++) {
+                    const rowFromBottom = GRID_ROWS - 1 - r;
+                    const t = pixelTargets[r][c];
+
+                    if (rowFromBottom < barHeight) {
+                        // Lit pixel — color shifts based on height
+                        const heightRatio = rowFromBottom / GRID_ROWS;
+                        // Bottom = green, mid = amber/orange, top = red (like a VU meter)
+                        let pixH, pixS, pixL;
+                        if (heightRatio < 0.5) {
+                            pixH = 120 + (1 - heightRatio * 2) * -75; // green to yellow
+                            pixS = 100;
+                            pixL = 45 + heightRatio * 15;
+                        } else if (heightRatio < 0.8) {
+                            pixH = 45 - (heightRatio - 0.5) / 0.3 * 25; // yellow to orange
+                            pixS = 100;
+                            pixL = 55;
+                        } else {
+                            pixH = 0; // red at top
+                            pixS = 100;
+                            pixL = 50 + beatFlash * 20;
+                        }
+                        t.hue = pixH;
+                        t.sat = pixS;
+                        t.lit = pixL;
+                        t.alpha = 0.7 + val * 0.3 + beatBoost;
+                    } else {
+                        // Unlit — fade out
+                        t.alpha = 0;
+                    }
+                }
             }
 
-            const segments = 8;
-            const segAngle = Math.PI * 2 / segments;
+            // Scatter random bright pixels on beats
+            if (isBeat) {
+                const scatterCount = 8 + Math.floor(bass * 20);
+                for (let i = 0; i < scatterCount; i++) {
+                    const sr = Math.floor(Math.random() * GRID_ROWS);
+                    const sc = Math.floor(Math.random() * GRID_COLS);
+                    const color = ledColors[Math.floor(Math.random() * ledColors.length)];
+                    pixelTargets[sr][sc].hue = color.h;
+                    pixelTargets[sr][sc].sat = color.s;
+                    pixelTargets[sr][sc].lit = color.l + 15;
+                    pixelTargets[sr][sc].alpha = 0.9 + Math.random() * 0.1;
+                }
+            }
 
-            ctx.save();
-            ctx.translate(cx, cy);
+            // Treble sparkles — random bright pixels in upper rows
+            if (treble > 0.3) {
+                const sparkleCount = Math.floor(treble * 6);
+                for (let i = 0; i < sparkleCount; i++) {
+                    const sr = Math.floor(Math.random() * Math.floor(GRID_ROWS * 0.4));
+                    const sc = Math.floor(Math.random() * GRID_COLS);
+                    const color = ledColors[Math.floor(Math.random() * ledColors.length)];
+                    pixelTargets[sr][sc].hue = color.h;
+                    pixelTargets[sr][sc].sat = color.s;
+                    pixelTargets[sr][sc].lit = color.l + 10;
+                    pixelTargets[sr][sc].alpha = Math.max(pixelTargets[sr][sc].alpha, 0.5 + treble * 0.5);
+                }
+            }
 
-            // Kaleidoscope mirrored segments
-            for (let seg = 0; seg < segments; seg++) {
-                ctx.save();
-                ctx.rotate(seg * segAngle + time * 0.1 * (1 + smoothBass * 0.5));
-                if (seg % 2) ctx.scale(1, -1);
+            // === Smoothly interpolate current grid toward targets and draw ===
+            for (let r = 0; r < GRID_ROWS; r++) {
+                for (let c = 0; c < GRID_COLS; c++) {
+                    const p = pixelGrid[r][c];
+                    const t = pixelTargets[r][c];
 
-                // Radial frequency bars — thick and bright
-                const barCount = 32;
-                for (let i = 0; i < barCount; i++) {
-                    const freqIdx = Math.floor((i / barCount) * freqData.length * 0.4);
-                    const val = freqData[freqIdx] / 255;
-                    const barAngle = (i / barCount) * segAngle;
-                    const innerR = 30 + smoothBass * 40;
-                    const outerR = innerR + val * Math.min(width, height) * 0.35;
+                    // Fast attack, slow decay (like real LEDs)
+                    const attackSpeed = 0.5;
+                    const decaySpeed = 0.08;
+                    const speed = t.alpha > p.alpha ? attackSpeed : decaySpeed;
 
-                    ctx.beginPath();
-                    ctx.moveTo(Math.cos(barAngle) * innerR, Math.sin(barAngle) * innerR);
-                    ctx.lineTo(Math.cos(barAngle) * outerR, Math.sin(barAngle) * outerR);
+                    p.hue = lerp(p.hue, t.hue, 0.3);
+                    p.sat = lerp(p.sat, t.sat, 0.3);
+                    p.lit = lerp(p.lit, t.lit, 0.3);
+                    p.alpha = lerp(p.alpha, t.alpha, speed);
 
-                    const hue1 = i * 11 + time * 40 + beatCount * 20;
-                    ctx.strokeStyle = hsl(hue1, 100, 55 + val * 35, 0.4 + val * 0.6);
-                    ctx.lineWidth = 2 + val * 5 + beatFlash * 3;
-                    ctx.lineCap = 'round';
-                    ctx.stroke();
+                    // Only draw if visible
+                    if (p.alpha < 0.02) continue;
 
-                    // Glow on tips
-                    if (val > 0.5) {
+                    const px = offsetX + gap + c * (pixelSize + gap);
+                    const py = offsetY + gap + r * (pixelSize + gap);
+
+                    // LED glow behind (larger, softer)
+                    if (p.alpha > 0.2) {
+                        const glowSize = pixelSize * 0.6;
                         ctx.beginPath();
-                        ctx.arc(Math.cos(barAngle) * outerR, Math.sin(barAngle) * outerR, 3 + val * 6, 0, Math.PI * 2);
-                        ctx.fillStyle = hsl(hue1, 100, 80, val * 0.6);
+                        ctx.arc(px + pixelSize / 2, py + pixelSize / 2, pixelSize / 2 + glowSize, 0, Math.PI * 2);
+                        ctx.fillStyle = hsl(p.hue, p.sat, p.lit * 0.7, p.alpha * 0.12);
+                        ctx.fill();
+                    }
+
+                    // LED pixel (rounded square)
+                    ctx.beginPath();
+                    ctx.roundRect(px, py, pixelSize, pixelSize, roundR);
+                    ctx.fillStyle = hsl(p.hue, p.sat, p.lit, p.alpha);
+                    ctx.fill();
+
+                    // Bright center hotspot (simulates LED lens)
+                    if (p.alpha > 0.4) {
+                        const csx = px + pixelSize * 0.3;
+                        const csy = py + pixelSize * 0.3;
+                        const csw = pixelSize * 0.4;
+                        ctx.beginPath();
+                        ctx.roundRect(csx, csy, csw, csw, roundR * 0.5);
+                        ctx.fillStyle = hsl(p.hue, p.sat * 0.6, Math.min(95, p.lit + 25), p.alpha * 0.5);
                         ctx.fill();
                     }
                 }
-
-                // Spiraling polygons
-                for (let ring = 0; ring < 4; ring++) {
-                    const sides = 3 + ring;
-                    const baseR = 60 + ring * 65 + smoothBass * 50;
-                    const rot = time * (0.5 + ring * 0.2) * (ring % 2 ? 1 : -1);
-
-                    ctx.beginPath();
-                    for (let i = 0; i <= sides; i++) {
-                        const a = (i / sides) * segAngle + rot;
-                        const wobble = Math.sin(time * 3 + i * 2) * treble * 25;
-                        const r = baseR + wobble + mid * 40;
-                        const px = Math.cos(a) * r;
-                        const py = Math.sin(a) * r;
-                        if (i === 0) ctx.moveTo(px, py);
-                        else ctx.lineTo(px, py);
-                    }
-                    const ringHue = 180 + ring * 50 + time * 25;
-                    ctx.strokeStyle = hsl(ringHue, 90, 60, 0.3 + energy * 0.5);
-                    ctx.lineWidth = 2 + smoothBass * 4 + beatFlash * 4;
-                    ctx.shadowColor = hsl(ringHue, 100, 60, 0.8);
-                    ctx.shadowBlur = 10 + beatFlash * 20;
-                    ctx.stroke();
-                    ctx.shadowBlur = 0;
-                }
-
-                ctx.restore();
             }
 
-            ctx.restore();
-
-            // Center core — pulsing orb
-            const coreR = 20 + smoothBass * 50 + beatFlash * 40;
-            for (let layer = 3; layer >= 0; layer--) {
-                const r = coreR * (1 + layer * 0.5);
-                const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
-                const coreHue = time * 30 + beatCount * 30;
-                grad.addColorStop(0, hsl(coreHue, 100, 90, 0.5 / (layer + 1)));
-                grad.addColorStop(0.5, hsl(coreHue + 60, 100, 60, 0.2 / (layer + 1)));
-                grad.addColorStop(1, 'transparent');
-                ctx.fillStyle = grad;
-                ctx.fillRect(cx - r, cy - r, r * 2, r * 2);
-            }
-
-            // Beat particles
-            if (isBeat) {
-                spawnBurst(cx, cy, 20 + Math.floor(bass * 30), beatCount * 60, 3 + bass * 8, 2 + bass * 4);
-            }
-            updateParticles();
+            // Subtle dark grid lines (the frame between LEDs)
+            ctx.strokeStyle = 'rgba(20, 20, 30, 0.3)';
+            ctx.lineWidth = gap;
+            ctx.strokeRect(offsetX, offsetY, totalW, totalH);
         }
 
         // Mode 1: NEON LIQUID FIRE
