@@ -227,6 +227,70 @@
             pointer-events: none;
         }
 
+        /* Sensitivity slider */
+        .sensitivity-wrap {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .sensitivity-wrap label {
+            font-size: 11px;
+            color: var(--text-dim);
+            white-space: nowrap;
+        }
+        .sensitivity-slider {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 70px;
+            height: 4px;
+            background: var(--border);
+            border-radius: 2px;
+            outline: none;
+            cursor: pointer;
+        }
+        .sensitivity-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: var(--accent);
+            cursor: pointer;
+            box-shadow: 0 0 6px var(--accent-glow);
+        }
+        .sensitivity-slider::-moz-range-thumb {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: var(--accent);
+            cursor: pointer;
+            border: none;
+        }
+
+        /* Theme picker */
+        .theme-btns {
+            display: flex;
+            gap: 4px;
+        }
+        .theme-dot {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            border: 2px solid transparent;
+            cursor: pointer;
+            transition: border-color 0.2s, transform 0.2s;
+        }
+        .theme-dot:hover {
+            transform: scale(1.2);
+        }
+        .theme-dot.active {
+            border-color: var(--text);
+        }
+        .theme-dot[data-theme="neon"] { background: linear-gradient(135deg, #ff00ff, #00ffff); }
+        .theme-dot[data-theme="warm"] { background: linear-gradient(135deg, #ff4500, #ffd700); }
+        .theme-dot[data-theme="cool"] { background: linear-gradient(135deg, #0077ff, #00ff88); }
+        .theme-dot[data-theme="mono"] { background: linear-gradient(135deg, #888, #fff); }
+
         /* Mobile adjustments */
         @media (max-width: 640px) {
             .controls {
@@ -291,6 +355,25 @@
             <button class="ctrl-btn mode-btn" data-mode="1" title="Organic">&#x223F;</button>
             <button class="ctrl-btn mode-btn" data-mode="2" title="Cosmic">&#x2726;</button>
             <button class="ctrl-btn mode-btn" data-mode="3" title="Minimal">&#x25CB;</button>
+            <button class="ctrl-btn mode-btn" data-mode="4" title="Ambient Grid">&#x2593;</button>
+        </div>
+
+        <div class="divider"></div>
+
+        <!-- Sensitivity -->
+        <div class="sensitivity-wrap">
+            <label>Gain</label>
+            <input type="range" class="sensitivity-slider" id="sensitivitySlider" min="0.5" max="4" step="0.1" value="1.5">
+        </div>
+
+        <div class="divider"></div>
+
+        <!-- Theme picker -->
+        <div class="theme-btns">
+            <div class="theme-dot active" data-theme="neon" title="Neon"></div>
+            <div class="theme-dot" data-theme="warm" title="Warm"></div>
+            <div class="theme-dot" data-theme="cool" title="Cool"></div>
+            <div class="theme-dot" data-theme="mono" title="Mono"></div>
         </div>
 
         <div class="divider"></div>
@@ -312,9 +395,11 @@
         const fileInput = document.getElementById('fileInput');
         const fsBtn = document.getElementById('fsBtn');
         const modeBtns = document.querySelectorAll('.mode-btn');
+        const sensitivitySlider = document.getElementById('sensitivitySlider');
+        const themeDots = document.querySelectorAll('.theme-dot');
 
         let width, height, cx, cy;
-        let audioCtx, analyser, freqData, timeData, source;
+        let audioCtx, analyser, freqData, timeData, source, gainNode;
         let currentMode = 0;
         let isActive = false;
         let hideTimer = null;
@@ -322,6 +407,8 @@
         let time = 0;
         let micStream = null;
         let audioElement = null;
+        let sensitivity = 1.5;
+        let currentTheme = 'neon';
 
         // Beat detection state
         let prevBass = 0, prevMid = 0, prevTreble = 0;
@@ -353,6 +440,9 @@
             analyser = audioCtx.createAnalyser();
             analyser.fftSize = 4096;
             analyser.smoothingTimeConstant = 0.75;
+            gainNode = audioCtx.createGain();
+            gainNode.gain.value = sensitivity;
+            gainNode.connect(analyser);
             freqData = new Uint8Array(analyser.frequencyBinCount);
             timeData = new Uint8Array(analyser.fftSize);
         }
@@ -361,6 +451,9 @@
             if (source) {
                 try { source.disconnect(); } catch(e) {}
                 source = null;
+            }
+            if (analyser) {
+                try { analyser.disconnect(); } catch(e) {}
             }
             if (micStream) {
                 micStream.getTracks().forEach(t => t.stop());
@@ -376,15 +469,23 @@
             initAudio();
             disconnectSource();
             try {
-                micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                // Resume AudioContext first (requires user gesture)
+                if (audioCtx.state === 'suspended') {
+                    await audioCtx.resume();
+                }
+                micStream = await navigator.mediaDevices.getUserMedia({
+                    audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false }
+                });
                 source = audioCtx.createMediaStreamSource(micStream);
-                source.connect(analyser);
+                // Mic: source → gainNode → analyser (NOT to destination — avoids feedback)
+                source.connect(gainNode);
                 micBtn.classList.add('active');
                 fileBtn.classList.remove('active');
                 nowPlaying.textContent = 'Listening...';
                 activate();
             } catch(e) {
-                nowPlaying.textContent = 'Mic denied';
+                nowPlaying.textContent = 'Mic denied — check permissions';
+                console.error('Mic error:', e);
             }
         }
 
@@ -395,7 +496,8 @@
             audioElement.crossOrigin = 'anonymous';
             audioElement.src = URL.createObjectURL(file);
             source = audioCtx.createMediaElementSource(audioElement);
-            source.connect(analyser);
+            // File: source → gainNode → analyser → destination (so we hear it)
+            source.connect(gainNode);
             analyser.connect(audioCtx.destination);
             audioElement.play();
             fileBtn.classList.add('active');
@@ -434,7 +536,15 @@
         function lerp(a, b, t) { return a + (b - a) * t; }
 
         function hsl(h, s, l, a) {
-            return `hsla(${((h % 360) + 360) % 360}, ${s}%, ${l}%, ${a || 1})`;
+            const th = themes[currentTheme];
+            let fh = h;
+            let fs = s;
+            if (th.sat === 0) { fs = 0; } // mono
+            else if (currentTheme !== 'neon') {
+                fh = th.hueBase + (((h % 360 + 360) % 360) / 360) * th.hueRange;
+                fs = Math.min(100, s * th.sat / 100);
+            }
+            return `hsla(${((fh % 360) + 360) % 360}, ${fs}%, ${Math.min(100, l + th.litBoost)}%, ${a || 1})`;
         }
 
         function noise(x, y) {
@@ -1133,8 +1243,149 @@
             ctx.fill();
         }
 
+        // ==================== THEME SYSTEM ====================
+        const themes = {
+            neon:  { hueBase: 280, hueRange: 120, sat: 100, litBoost: 0 },
+            warm:  { hueBase: 10,  hueRange: 50,  sat: 95,  litBoost: 5 },
+            cool:  { hueBase: 180, hueRange: 80,  sat: 90,  litBoost: 0 },
+            mono:  { hueBase: 0,   hueRange: 0,   sat: 0,   litBoost: 15 }
+        };
+        // ==================== MODE 4: AMBIENT GRID ====================
+        const AMBIENT_COLS = 24;
+        const AMBIENT_ROWS = 14;
+        let ambientCells = [];
+        function initAmbientGrid() {
+            ambientCells = [];
+            for (let r = 0; r < AMBIENT_ROWS; r++) {
+                ambientCells[r] = [];
+                for (let c = 0; c < AMBIENT_COLS; c++) {
+                    // Each cell maps to a random frequency bin
+                    ambientCells[r][c] = {
+                        freqBin: Math.floor(Math.random() * 512),
+                        hueOffset: Math.random() * 60 - 30,
+                        phase: Math.random() * Math.PI * 2,
+                        currentGlow: 0,
+                        currentHue: 0,
+                        pulsePhase: Math.random() * Math.PI * 2
+                    };
+                }
+            }
+        }
+        initAmbientGrid();
+
+        function drawAmbientGrid() {
+            const bass = getBand(freqData, 0, 0.08);
+            const mid = getBand(freqData, 0.08, 0.35);
+            const treble = getBand(freqData, 0.35, 1.0);
+            const energy = getEnergy();
+            const isBeat = detectBeat(bass, mid, treble, energy);
+
+            // Dark background with slight fade for trails
+            ctx.fillStyle = `rgba(5, 5, 8, 0.15)`;
+            ctx.fillRect(0, 0, width, height);
+
+            const gap = 3;
+            const cellW = (width - gap * (AMBIENT_COLS + 1)) / AMBIENT_COLS;
+            const cellH = (height - gap * (AMBIENT_ROWS + 1)) / AMBIENT_ROWS;
+            const cellSize = Math.floor(Math.min(cellW, cellH));
+            const totalW = AMBIENT_COLS * (cellSize + gap) + gap;
+            const totalH = AMBIENT_ROWS * (cellSize + gap) + gap;
+            const offsetX = (width - totalW) / 2;
+            const offsetY = (height - totalH) / 2;
+            const roundR = Math.max(2, cellSize * 0.12);
+
+            for (let r = 0; r < AMBIENT_ROWS; r++) {
+                for (let c = 0; c < AMBIENT_COLS; c++) {
+                    const cell = ambientCells[r][c];
+
+                    // Get this cell's frequency level
+                    const freqVal = freqData[cell.freqBin] / 255;
+
+                    // Determine color band based on freq bin position
+                    const bandPos = cell.freqBin / 512;
+                    let baseHue;
+                    if (bandPos < 0.15) baseHue = 0;         // bass → red/magenta
+                    else if (bandPos < 0.4) baseHue = 120;   // low-mid → green/teal
+                    else if (bandPos < 0.7) baseHue = 200;   // mid → blue/cyan
+                    else baseHue = 280;                        // treble → purple/pink
+
+                    const targetHue = baseHue + cell.hueOffset + Math.sin(time * 0.5 + cell.phase) * 20;
+                    const targetGlow = freqVal;
+
+                    // Smooth interpolation
+                    cell.currentGlow = lerp(cell.currentGlow, targetGlow, 0.25);
+                    cell.currentHue = lerp(cell.currentHue, targetHue, 0.08);
+
+                    // Beat boost — random cells flash brighter
+                    let beatBoost = 0;
+                    if (isBeat && Math.random() < 0.3) {
+                        beatBoost = 0.4 * bass;
+                    }
+
+                    // Breathing pulse per cell
+                    cell.pulsePhase += 0.02 + freqVal * 0.05;
+                    const pulse = Math.sin(cell.pulsePhase) * 0.08;
+
+                    const intensity = Math.min(1, cell.currentGlow + beatBoost + pulse);
+                    if (intensity < 0.02) continue;
+
+                    const px = offsetX + gap + c * (cellSize + gap);
+                    const py = offsetY + gap + r * (cellSize + gap);
+
+                    const sat = 70 + intensity * 30;
+                    const lit = 5 + intensity * 55;
+                    const alpha = 0.1 + intensity * 0.9;
+
+                    // Outer glow (large, soft)
+                    if (intensity > 0.15) {
+                        const glowR = cellSize * (0.4 + intensity * 0.6);
+                        const gcx = px + cellSize / 2;
+                        const gcy = py + cellSize / 2;
+                        const grad = ctx.createRadialGradient(gcx, gcy, 0, gcx, gcy, cellSize / 2 + glowR);
+                        grad.addColorStop(0, hsl(cell.currentHue, sat, lit * 0.8, intensity * 0.3));
+                        grad.addColorStop(0.5, hsl(cell.currentHue, sat, lit * 0.5, intensity * 0.1));
+                        grad.addColorStop(1, 'transparent');
+                        ctx.fillStyle = grad;
+                        ctx.fillRect(gcx - cellSize / 2 - glowR, gcy - cellSize / 2 - glowR,
+                                     cellSize + glowR * 2, cellSize + glowR * 2);
+                    }
+
+                    // Main square
+                    ctx.beginPath();
+                    ctx.roundRect(px, py, cellSize, cellSize, roundR);
+                    ctx.fillStyle = hsl(cell.currentHue, sat, lit, alpha);
+                    ctx.fill();
+
+                    // Hot center for high intensity
+                    if (intensity > 0.5) {
+                        const cSize = cellSize * 0.5;
+                        const cx2 = px + (cellSize - cSize) / 2;
+                        const cy2 = py + (cellSize - cSize) / 2;
+                        ctx.beginPath();
+                        ctx.roundRect(cx2, cy2, cSize, cSize, roundR * 0.5);
+                        ctx.fillStyle = hsl(cell.currentHue, sat * 0.5, Math.min(98, lit + 30), intensity * 0.6);
+                        ctx.fill();
+                    }
+                }
+            }
+
+            // On beat: ripple wave from center
+            if (isBeat) {
+                const rippleCX = AMBIENT_COLS / 2;
+                const rippleCY = AMBIENT_ROWS / 2;
+                for (let r = 0; r < AMBIENT_ROWS; r++) {
+                    for (let c = 0; c < AMBIENT_COLS; c++) {
+                        const dist = Math.sqrt((c - rippleCX) ** 2 + (r - rippleCY) ** 2);
+                        if (dist < 4 + bass * 6) {
+                            ambientCells[r][c].currentGlow = Math.min(1, ambientCells[r][c].currentGlow + 0.4 * (1 - dist / (4 + bass * 6)));
+                        }
+                    }
+                }
+            }
+        }
+
         // ==================== ANIMATION LOOP ====================
-        const drawFns = [drawGeometric, drawOrganic, drawCosmic, drawMinimal];
+        const drawFns = [drawGeometric, drawOrganic, drawCosmic, drawMinimal, drawAmbientGrid];
 
         function animate() {
             analyser.getByteFrequencyData(freqData);
@@ -1172,7 +1423,7 @@
         }
 
         document.addEventListener('keydown', (e) => {
-            if (e.key >= '1' && e.key <= '4') {
+            if (e.key >= '1' && e.key <= '5') {
                 const mode = parseInt(e.key) - 1;
                 currentMode = mode;
                 modeBtns.forEach(b => b.classList.remove('active'));
@@ -1207,10 +1458,25 @@
             }, 3000);
         }
 
+        // Sensitivity slider
+        sensitivitySlider.addEventListener('input', (e) => {
+            sensitivity = parseFloat(e.target.value);
+            if (gainNode) gainNode.gain.value = sensitivity;
+        });
+
+        // Theme picker
+        themeDots.forEach(dot => {
+            dot.addEventListener('click', () => {
+                currentTheme = dot.dataset.theme;
+                themeDots.forEach(d => d.classList.remove('active'));
+                dot.classList.add('active');
+            });
+        });
+
         document.addEventListener('mousemove', showControls);
         document.addEventListener('touchstart', showControls);
 
-        window.addEventListener('resize', () => { initWarpStars(); });
+        window.addEventListener('resize', () => { initWarpStars(); initAmbientGrid(); });
 
         // Idle animation
         function idleAnimate() {
