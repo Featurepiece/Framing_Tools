@@ -87,13 +87,52 @@ const COL = {
 // =====================================================
 // STATE
 // =====================================================
-const STATE = { TITLE:'title', PLAYING:'playing', WIN:'win' };
+const STATE = { TITLE:'title', PLAYING:'playing', WIN:'win', INITIALS:'initials' };
 let gameState = STATE.TITLE;
 let frameCount = 0, toolsDelivered = 0, totalTime = 0, bestTime = null;
 let gameTimer = 0, currentToolIndex = 0, carryingTool = false;
 let sheepBumps = 0, dropFlashTimer = 0, titleBounce = 0;
 let parachuting = false;
 let pickupFlashTimer = 0;
+
+// =====================================================
+// LEADERBOARD
+// =====================================================
+const BLOB_ID = '019ce410-29da-718d-b354-a8fc7464aaec';
+const BLOB_URL = 'https://jsonblob.com/api/jsonBlob/' + BLOB_ID;
+let leaderboard = []; // [{initials:'CON', time:45}, ...]
+let playerInitials = '';
+let initialsCursor = 0; // which letter (0-2) we're entering
+const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+let selectedLetterIndex = 0; // which letter in ALPHABET is highlighted
+
+// Load leaderboard on page load
+async function loadLeaderboard() {
+  try {
+    const res = await fetch(BLOB_URL, {
+      headers: { 'Accept': 'application/json' }
+    });
+    if (res.ok) {
+      const data = await res.json();
+      leaderboard = (data.scores || []).sort((a,b) => a.time - b.time).slice(0, 5);
+    }
+  } catch(e) { console.log('Could not load leaderboard:', e); }
+}
+
+async function saveLeaderboard(initials, time) {
+  try {
+    leaderboard.push({ initials, time });
+    leaderboard.sort((a,b) => a.time - b.time);
+    leaderboard = leaderboard.slice(0, 5);
+    await fetch(BLOB_URL, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify({ scores: leaderboard })
+    });
+  } catch(e) { console.log('Could not save leaderboard:', e); }
+}
+
+loadLeaderboard();
 const MAX_BUMPS = 3;
 const PARACHUTE_SPEED = 1.2;
 
@@ -1183,6 +1222,10 @@ function drawTitle() {
     ctx.fillStyle = '#ffd700'; ctx.font = '11px "Press Start 2P"';
     ctx.fillText('PRESS SPACE OR TAP JUMP', BASE_W/2, 310);
   }
+
+  // Leaderboard
+  drawLeaderboardOnTitle();
+
   ctx.textAlign = 'left';
 }
 
@@ -1217,7 +1260,140 @@ function drawWin() {
   }
   if (frameCount%40 < 25) {
     ctx.fillStyle = '#ffd700'; ctx.font = '10px "Press Start 2P"';
-    ctx.fillText('PRESS SPACE TO PLAY AGAIN', BASE_W/2, 310);
+    ctx.fillText('PRESS SPACE TO CONTINUE', BASE_W/2, 310);
+  }
+  ctx.textAlign = 'left';
+}
+
+// =====================================================
+// INITIALS ENTRY SCREEN
+// =====================================================
+function drawInitials() {
+  // Dark background
+  const grad = ctx.createLinearGradient(0, 0, 0, BASE_H);
+  grad.addColorStop(0, '#1a1a3e'); grad.addColorStop(1, '#0a0a1e');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, BASE_W, BASE_H);
+
+  // Stars background
+  ctx.fillStyle = COL.starYellow;
+  for (let i = 0; i < 15; i++) {
+    const sx = (frameCount*0.3+i*73)%BASE_W;
+    const sy = (i*47+Math.sin(frameCount*0.04+i)*15)%(BASE_H-50);
+    const sz = Math.sin(frameCount*0.1+i)*1+2;
+    ctx.fillRect(sx, sy, sz, sz);
+  }
+
+  ctx.textAlign = 'center';
+
+  // Title
+  ctx.fillStyle = '#ffd700'; ctx.font = '16px "Press Start 2P"';
+  ctx.fillText('WELL DONE!', BASE_W/2, 80);
+
+  ctx.fillStyle = '#fff'; ctx.font = '11px "Press Start 2P"';
+  ctx.fillText('TIME: ' + totalTime + ' seconds', BASE_W/2, 115);
+
+  ctx.fillStyle = '#ffaa44'; ctx.font = '12px "Press Start 2P"';
+  ctx.fillText('ENTER YOUR INITIALS', BASE_W/2, 160);
+
+  // Show entered letters + cursor
+  const boxSize = 36;
+  const boxGap = 12;
+  const totalW = boxSize*3 + boxGap*2;
+  const startX = (BASE_W - totalW) / 2;
+  const boxY = 180;
+
+  for (let i = 0; i < 3; i++) {
+    const bx = startX + i*(boxSize+boxGap);
+    // Box
+    ctx.fillStyle = i === initialsCursor ? 'rgba(255,215,0,0.2)' : 'rgba(255,255,255,0.1)';
+    ctx.strokeStyle = i === initialsCursor ? '#ffd700' : '#555';
+    ctx.lineWidth = 2;
+    ctx.fillRect(bx, boxY, boxSize, boxSize);
+    ctx.strokeRect(bx, boxY, boxSize, boxSize);
+    // Letter
+    if (i < playerInitials.length) {
+      ctx.fillStyle = '#fff'; ctx.font = '20px "Press Start 2P"';
+      ctx.fillText(playerInitials[i], bx + boxSize/2, boxY + 26);
+    } else if (i === initialsCursor) {
+      // Blinking cursor letter
+      ctx.fillStyle = '#ffd700'; ctx.font = '20px "Press Start 2P"';
+      if (frameCount%30 < 20) {
+        ctx.fillText(ALPHABET[selectedLetterIndex], bx + boxSize/2, boxY + 26);
+      }
+    }
+  }
+
+  // Alphabet selector
+  const alphaY = 250;
+  ctx.font = '9px "Press Start 2P"';
+
+  // Show a window of 9 letters centred on selection
+  const windowSize = 9;
+  const halfWin = Math.floor(windowSize/2);
+  const letterW = 32;
+  const alphaStartX = (BASE_W - windowSize*letterW) / 2;
+
+  for (let i = 0; i < windowSize; i++) {
+    const li = (selectedLetterIndex - halfWin + i + 26) % 26;
+    const lx = alphaStartX + i*letterW + letterW/2;
+    const isCurrent = (i === halfWin);
+
+    if (isCurrent) {
+      // Highlight current letter
+      ctx.fillStyle = 'rgba(255,215,0,0.3)';
+      ctx.fillRect(lx-14, alphaY-12, 28, 22);
+      ctx.fillStyle = '#ffd700'; ctx.font = '14px "Press Start 2P"';
+      ctx.fillText(ALPHABET[li], lx, alphaY+6);
+    } else {
+      const dist = Math.abs(i - halfWin);
+      ctx.globalAlpha = 1 - dist*0.15;
+      ctx.fillStyle = '#888'; ctx.font = '9px "Press Start 2P"';
+      ctx.fillText(ALPHABET[li], lx, alphaY+4);
+      ctx.globalAlpha = 1;
+    }
+  }
+
+  // Arrows
+  ctx.fillStyle = '#ffd700'; ctx.font = '14px "Press Start 2P"';
+  ctx.fillText('\u25C0', alphaStartX - 10, alphaY+5);
+  ctx.fillText('\u25B6', alphaStartX + windowSize*letterW + 10, alphaY+5);
+
+  // Instructions
+  ctx.fillStyle = '#888'; ctx.font = '7px "Press Start 2P"';
+  ctx.fillText('\u25C0 \u25B6 TO CHOOSE     JUMP TO CONFIRM', BASE_W/2, 290);
+
+  // Show current leaderboard below
+  if (leaderboard.length > 0) {
+    ctx.fillStyle = '#ffaa44'; ctx.font = '9px "Press Start 2P"';
+    ctx.fillText('- HIGH SCORES -', BASE_W/2, 330);
+    ctx.font = '8px "Press Start 2P"';
+    for (let i = 0; i < leaderboard.length && i < 5; i++) {
+      const s = leaderboard[i];
+      const medal = i === 0 ? '\u2605 ' : '  ';
+      ctx.fillStyle = i === 0 ? '#ffd700' : '#ccc';
+      ctx.fillText(medal + s.initials + '  ' + s.time + 's', BASE_W/2, 355 + i*20);
+    }
+  }
+
+  ctx.textAlign = 'left';
+}
+
+// =====================================================
+// DRAW LEADERBOARD ON TITLE SCREEN
+// =====================================================
+function drawLeaderboardOnTitle() {
+  if (leaderboard.length === 0) return;
+  const startY = 410;
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#ffaa44'; ctx.font = '8px "Press Start 2P"';
+  ctx.fillText('- HIGH SCORES -', BASE_W/2, startY);
+  ctx.font = '7px "Press Start 2P"';
+  for (let i = 0; i < leaderboard.length && i < 5; i++) {
+    const s = leaderboard[i];
+    ctx.fillStyle = i === 0 ? '#ffd700' : '#ccc';
+    const medal = i === 0 ? '\u2605 ' : (i+1) + '. ';
+    ctx.fillText(medal + s.initials + '  ' + s.time + 's', BASE_W/2, startY + 18 + i*16);
   }
   ctx.textAlign = 'left';
 }
@@ -1246,7 +1422,42 @@ function update() {
     gameTimer++;
     updatePlayer(); updateSheep(); updateMarty();
   } else if (gameState === STATE.WIN) {
-    if (keyPressed('Space') || keyPressed('Enter') || (touch.jump && !prevTouchJump)) gameState = STATE.TITLE;
+    if (keyPressed('Space') || keyPressed('Enter') || (touch.jump && !prevTouchJump)) {
+      // Go to initials entry
+      gameState = STATE.INITIALS;
+      playerInitials = '';
+      initialsCursor = 0;
+      selectedLetterIndex = 0;
+    }
+  } else if (gameState === STATE.INITIALS) {
+    // Navigate alphabet
+    let moveL = keyPressed('ArrowLeft') || keyPressed('KeyA');
+    let moveR = keyPressed('ArrowRight') || keyPressed('KeyD');
+
+    // Touch: trigger on first press, then repeat every 12 frames while held
+    if (touch.left) {
+      if (!prevKeys._touchLeft) { moveL = true; prevKeys._touchRepeatL = 0; }
+      else { prevKeys._touchRepeatL++; if (prevKeys._touchRepeatL % 12 === 0) moveL = true; }
+    } else { prevKeys._touchRepeatL = 0; }
+    if (touch.right) {
+      if (!prevKeys._touchRight) { moveR = true; prevKeys._touchRepeatR = 0; }
+      else { prevKeys._touchRepeatR++; if (prevKeys._touchRepeatR % 12 === 0) moveR = true; }
+    } else { prevKeys._touchRepeatR = 0; }
+
+    if (moveL) selectedLetterIndex = (selectedLetterIndex - 1 + 26) % 26;
+    if (moveR) selectedLetterIndex = (selectedLetterIndex + 1) % 26;
+
+    if (keyPressed('Space') || keyPressed('Enter') || (touch.jump && !prevTouchJump)) {
+      playerInitials += ALPHABET[selectedLetterIndex];
+      initialsCursor++;
+      if (initialsCursor >= 3) {
+        saveLeaderboard(playerInitials, totalTime);
+        loadLeaderboard(); // refresh the displayed leaderboard
+        gameState = STATE.TITLE;
+      }
+    }
+    prevKeys._touchLeft = touch.left;
+    prevKeys._touchRight = touch.right;
   }
   for (const k in keys) prevKeys[k] = keys[k];
   prevTouchJump = touch.jump;
@@ -1265,6 +1476,7 @@ function draw() {
     drawMarty(); drawDJParticles(); drawConn(player); drawDropFlash(); drawPickupFlash();
   }
   else if (gameState === STATE.WIN) { drawWin(); }
+  else if (gameState === STATE.INITIALS) { drawInitials(); }
 }
 
 function loop() { update(); draw(); requestAnimationFrame(loop); }
