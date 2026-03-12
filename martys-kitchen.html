@@ -1,0 +1,1258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Marty's Kitchen - Help Dad Build!</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    background: #1a1a2e; display:flex; flex-direction:column;
+    align-items:center; justify-content:center; min-height:100vh;
+    font-family:'Press Start 2P',monospace; overflow:hidden;
+    touch-action:none; user-select:none; -webkit-user-select:none;
+  }
+  #gameCanvas { display:block; image-rendering:pixelated; border:3px solid #e6a817; border-radius:4px; }
+  #hud {
+    display:flex; justify-content:space-between; width:100%; max-width:520px;
+    padding:8px 12px; color:#e6a817; font-size:9px; letter-spacing:1px;
+  }
+  #controls {
+    display:flex; justify-content:space-between; align-items:center;
+    width:100%; max-width:520px; padding:10px 8px 20px; gap:10px;
+  }
+  .ctrl-btn {
+    background:rgba(230,168,23,0.15); border:2px solid #e6a817; color:#e6a817;
+    font-family:'Press Start 2P',monospace; font-size:18px; border-radius:12px;
+    width:70px; height:70px; display:flex; align-items:center; justify-content:center;
+    cursor:pointer; -webkit-tap-highlight-color:transparent;
+  }
+  .ctrl-btn:active, .ctrl-btn.active { background:rgba(230,168,23,0.4); }
+  #dpad { display:flex; gap:6px; }
+  @media(min-width:600px){ #controls { display:none; } }
+</style>
+</head>
+<body>
+<div id="hud">
+  <span>TOOLS: <span id="toolsDisplay">0</span>/5</span>
+  <span>BUMPS: <span id="bumpsDisplay">0</span>/3</span>
+  <span>TIME: <span id="timeDisplay">0</span>s</span>
+  <span>BEST: <span id="bestDisplay">-</span></span>
+</div>
+<canvas id="gameCanvas" width="448" height="540"></canvas>
+<div id="controls">
+  <div id="dpad">
+    <div id="btnLeft" class="ctrl-btn">&#9664;</div>
+    <div id="btnRight" class="ctrl-btn">&#9654;</div>
+  </div>
+  <div id="btnJump" class="ctrl-btn">JUMP</div>
+</div>
+
+<script>
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+const BASE_W = 448;
+const BASE_H = 540;
+
+function getScale() {
+  const maxW = Math.min(window.innerWidth, 520);
+  const maxH = window.innerHeight - 220;
+  return Math.min(maxW / BASE_W, maxH / BASE_H, 1);
+}
+function resize() {
+  canvas.width = BASE_W; canvas.height = BASE_H;
+  const s = getScale();
+  canvas.style.width = (BASE_W*s)+'px';
+  canvas.style.height = (BASE_H*s)+'px';
+}
+resize();
+window.addEventListener('resize', resize);
+
+// =====================================================
+// COLOURS
+// =====================================================
+const COL = {
+  sky: '#87CEEB', grass: '#4a8c3f', grassDark: '#3a7030',
+  platform: '#8B7355', platformTop: '#a08660',
+  martyShirt: '#e04040', martyJeans: '#3355aa', martySkin: '#f5c5a3',
+  martyHair: '#4a3520',
+  connShirt: '#30a030', connJeans: '#3355aa', connSkin: '#f5c5a3', connHair: '#8B4513',
+  sheepBody: '#f0ece0', sheepFace: '#222', sheepLegs: '#555',
+  cabinet: '#b08050', worktop: '#666',
+  speechBubble: '#fff', speechText: '#222', starYellow: '#ffd700',
+  shelfWood: '#a07040', shelfDark: '#805530',
+};
+
+// =====================================================
+// STATE
+// =====================================================
+const STATE = { TITLE:'title', PLAYING:'playing', WIN:'win' };
+let gameState = STATE.TITLE;
+let frameCount = 0, toolsDelivered = 0, totalTime = 0, bestTime = null;
+let gameTimer = 0, currentToolIndex = 0, carryingTool = false;
+let sheepBumps = 0, dropFlashTimer = 0, titleBounce = 0;
+let parachuting = false;
+const MAX_BUMPS = 3;
+const PARACHUTE_SPEED = 1.2;
+
+// =====================================================
+// SOUND EFFECTS — Web Audio API synthesized sounds
+// =====================================================
+let audioCtx = null;
+function getAudio() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  return audioCtx;
+}
+
+function sfxJump() {
+  try {
+    const ctx = getAudio();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.type = 'square';
+    osc.frequency.setValueAtTime(300, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(600, ctx.currentTime + 0.1);
+    gain.gain.setValueAtTime(0.15, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.15);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.15);
+  } catch(e) {}
+}
+
+function sfxDoubleJump() {
+  try {
+    const ctx = getAudio();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.type = 'square';
+    osc.frequency.setValueAtTime(400, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(900, ctx.currentTime + 0.15);
+    gain.gain.setValueAtTime(0.15, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.2);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.2);
+  } catch(e) {}
+}
+
+function sfxPickup() {
+  try {
+    const ctx = getAudio();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(500, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(1000, ctx.currentTime + 0.1);
+    osc.frequency.exponentialRampToValueAtTime(1200, ctx.currentTime + 0.15);
+    gain.gain.setValueAtTime(0.2, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.2);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.2);
+  } catch(e) {}
+}
+
+function sfxDeliver() {
+  try {
+    const ctx = getAudio();
+    // Happy ascending arpeggio
+    [0, 0.1, 0.2].forEach((t, i) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime([523, 659, 784][i], ctx.currentTime + t);
+      gain.gain.setValueAtTime(0.18, ctx.currentTime + t);
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + t + 0.15);
+      osc.start(ctx.currentTime + t);
+      osc.stop(ctx.currentTime + t + 0.15);
+    });
+  } catch(e) {}
+}
+
+function sfxBaa() {
+  try {
+    const ctx = getAudio();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(200 + Math.random() * 80, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(150, ctx.currentTime + 0.2);
+    gain.gain.setValueAtTime(0.1, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.25);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.25);
+  } catch(e) {}
+}
+
+function sfxBonk() {
+  try {
+    const ctx = getAudio();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.type = 'square';
+    osc.frequency.setValueAtTime(200, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(80, ctx.currentTime + 0.1);
+    gain.gain.setValueAtTime(0.15, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.12);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.12);
+  } catch(e) {}
+}
+
+function sfxDrop() {
+  try {
+    const ctx = getAudio();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.type = 'square';
+    osc.frequency.setValueAtTime(400, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(100, ctx.currentTime + 0.3);
+    gain.gain.setValueAtTime(0.15, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.35);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.35);
+  } catch(e) {}
+}
+
+function sfxWin() {
+  try {
+    const ctx = getAudio();
+    [0, 0.12, 0.24, 0.36, 0.5].forEach((t, i) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime([523, 659, 784, 1047, 1318][i], ctx.currentTime + t);
+      gain.gain.setValueAtTime(0.18, ctx.currentTime + t);
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + t + 0.2);
+      osc.start(ctx.currentTime + t);
+      osc.stop(ctx.currentTime + t + 0.2);
+    });
+  } catch(e) {}
+}
+
+let footstepTimer = 0;
+function sfxFootstep() {
+  try {
+    const ctx = getAudio();
+    // Soft noise burst - like a little tap
+    const bufferSize = ctx.sampleRate * 0.04; // 40ms
+    const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) {
+      data[i] = (Math.random() * 2 - 1) * (1 - i/bufferSize);
+    }
+    const source = ctx.createBufferSource();
+    source.buffer = buffer;
+    const gain = ctx.createGain();
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(800, ctx.currentTime);
+    source.connect(filter);
+    filter.connect(gain);
+    gain.connect(ctx.destination);
+    gain.gain.setValueAtTime(0.06, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.04);
+    source.start(ctx.currentTime);
+  } catch(e) {}
+}
+
+const TOOLS = [
+  { name: 'HAMMER', color: '#888', handleCol: '#c08040' },
+  { name: 'DRILL', color: '#e04040', handleCol: '#444' },
+  { name: 'SAW', color: '#aaa', handleCol: '#c08040' },
+  { name: 'TAPE MEASURE', color: '#ffd700', handleCol: '#ffd700' },
+  { name: 'SPIRIT LEVEL', color: '#40cc40', handleCol: '#ffd700' },
+];
+
+// =====================================================
+// TOOL SHELF — bottom-left on ground
+// =====================================================
+const SHELF = { x: 16, y: 476, w: 50, h: 22 };
+
+// =====================================================
+// PLATFORMS — ZIGZAG ROUTING (verified, no cheese paths)
+// Single jump: ~75px height, ~85px horizontal
+// Double jump: ~140px height, ~130px horizontal
+// Route: Ground(right) -> P1(right) -> P2(centre) -> P3(far left) -> 
+//        P4(left-centre stepping stone) -> [DOUBLE JUMP] -> P5a(centre) ->
+//        P5b(right) -> TOP
+// =====================================================
+const platforms = [
+  // 0: Ground
+  { x: 0, y: 500, w: BASE_W, h: 40 },
+
+  // 1: P1 "Launchpad" — far right
+  { x: 325, y: 440, w: 100, h: 12 },
+
+  // 2: P2 "Centre Ledge" — centre
+  { x: 165, y: 385, w: 90, h: 12 },
+
+  // 3: P3 "Far Left" — extended (was P3+P4 combined)
+  { x: 10, y: 330, w: 145, h: 12 },
+
+  // 4: P5a "Double Jump Landing" — wider, needs double jump from P3
+  { x: 190, y: 240, w: 90, h: 12 },
+
+  // 5: P5b "Final Step" — far right, clear air above to jump left onto TOP
+  { x: 350, y: 170, w: 80, h: 12 },
+
+  // 6: TOP "Marty's Platform" — shorter, right side clear for P5b approach
+  { x: 30, y: 100, w: 250, h: 14 },
+];
+
+// =====================================================
+// PLAYER — with double jump
+// =====================================================
+let player = {
+  x: 60, y: 476, w: 18, h: 24,
+  vx: 0, vy: 0, onGround: false,
+  facing: 1, frame: 0, walking: false,
+  jumpsLeft: 2,   // 2 = can jump, 1 = can double jump, 0 = used both
+  doubleJumpUsed: false,
+  prevY: 476,     // previous frame Y for one-way platform check
+};
+
+// =====================================================
+// MARTY — bigger model (30x36)
+// =====================================================
+const marty = { x: 45, y: 68, w: 30, h: 36, speechTimer: 0, shouting: true };
+
+let toolSpawn = { x: 0, y: 0, visible: false };
+
+// =====================================================
+// SHEEP
+// =====================================================
+let sheep = [];
+function spawnSheep() {
+  sheep = [];
+  const candidates = [1,3,4];
+  const available = [...candidates];
+  for (let i = 0; i < 3 && available.length > 0; i++) {
+    const idx = Math.floor(Math.random() * available.length);
+    const pi = available[idx];
+    available.splice(idx, 1);
+    const p = platforms[pi];
+    if (p.w < 65) continue;
+    sheep.push({
+      x: p.x + 10 + Math.random() * (p.w - 44),
+      y: p.y - 16, w: 24, h: 16,
+      vx: (Math.random() > 0.5 ? 1 : -1) * (0.3 + Math.random() * 0.4),
+      platform: pi, baaTimer: 0, frame: 0,
+    });
+  }
+}
+
+// =====================================================
+// INPUT
+// =====================================================
+const keys = {}, prevKeys = {};
+const touch = { left: false, right: false, jump: false };
+let prevTouchJump = false;
+window.addEventListener('keydown', e => {
+  keys[e.code] = true;
+  if (['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code)) e.preventDefault();
+});
+window.addEventListener('keyup', e => { keys[e.code] = false; });
+function keyPressed(c) { return keys[c] && !prevKeys[c]; }
+function setupTouch(id, prop) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const on = () => { touch[prop] = true; el.classList.add('active'); };
+  const off = () => { touch[prop] = false; el.classList.remove('active'); };
+  el.addEventListener('touchstart', e => { e.preventDefault(); on(); });
+  el.addEventListener('touchend', e => { e.preventDefault(); off(); });
+  el.addEventListener('touchcancel', () => off());
+  el.addEventListener('mousedown', e => { e.preventDefault(); on(); });
+  el.addEventListener('mouseup', () => off());
+  el.addEventListener('mouseleave', () => off());
+}
+setupTouch('btnLeft', 'left');
+setupTouch('btnRight', 'right');
+setupTouch('btnJump', 'jump');
+
+// =====================================================
+// TOOL SPAWN — shelf
+// =====================================================
+function spawnTool() {
+  toolSpawn.x = SHELF.x + SHELF.w / 2;
+  toolSpawn.y = SHELF.y - 4;
+  toolSpawn.visible = true;
+  carryingTool = false;
+  sheepBumps = 0;
+  marty.shouting = true;
+  marty.speechTimer = 0;
+}
+
+// =====================================================
+// COLLISION
+// =====================================================
+function rectOverlap(a, b) {
+  return a.x < b.x+b.w && a.x+a.w > b.x && a.y < b.y+b.h && a.y+a.h > b.y;
+}
+function platformCheck(entity) {
+  entity.onGround = false;
+  for (const p of platforms) {
+    // Horizontal overlap check
+    if (entity.x + entity.w > p.x+4 && entity.x < p.x+p.w-4) {
+      const headNow = entity.y;
+      const headPrev = entity.prevY;
+      const feetNow = entity.y + entity.h;
+      const feetPrev = entity.prevY + entity.h;
+      const platTop = p.y;
+      const platBottom = p.y + p.h;
+
+      // LANDING ON TOP: falling down, feet were above platform top last frame
+      if (entity.vy >= 0 && feetPrev <= platTop && feetNow >= platTop) {
+        entity.y = platTop - entity.h;
+        entity.vy = 0;
+        entity.onGround = true;
+        return;
+      }
+
+      // HEAD BUMP: moving up, head hits underside of platform
+      // Head was below platform bottom last frame, now head is inside or above it
+      if (entity.vy < 0 && headPrev >= platBottom && headNow < platBottom) {
+        entity.y = platBottom; // push head back down to bottom of platform
+        entity.vy = 0;        // stop upward movement — bonk!
+        sfxBonk();
+      }
+    }
+  }
+}
+
+// =====================================================
+// UPDATE
+// =====================================================
+const GRAVITY = 0.4;
+const MOVE_SPEED = 2.4;
+const JUMP_FORCE = -8.0;
+const DOUBLE_JUMP_FORCE = -7.5;
+
+// Double jump particle effects
+let djParticles = [];
+
+function updatePlayer() {
+  // === PARACHUTE MODE ===
+  if (parachuting) {
+    const moveLeft = keys['ArrowLeft'] || keys['KeyA'] || touch.left;
+    const moveRight = keys['ArrowRight'] || keys['KeyD'] || touch.right;
+    player.vx = 0;
+    player.walking = false;
+    if (moveLeft) { player.vx = -MOVE_SPEED * 0.6; player.facing = -1; }
+    if (moveRight) { player.vx = MOVE_SPEED * 0.6; player.facing = 1; }
+    
+    // Gentle sway
+    player.vx += Math.sin(frameCount * 0.05) * 0.3;
+    
+    // Slow descent
+    player.vy = PARACHUTE_SPEED;
+    player.x += player.vx;
+    player.y += player.vy;
+    
+    // Boundaries
+    if (player.x < 0) player.x = 0;
+    if (player.x + player.w > BASE_W) player.x = BASE_W - player.w;
+    
+    // Check if landed on ground (platform 0, y=400)
+    if (player.y + player.h >= 500) {
+      player.y = 500 - player.h;
+      player.vy = 0;
+      player.onGround = true;
+      parachuting = false;
+      player.jumpsLeft = 2;
+      player.doubleJumpUsed = false;
+      // Spawn next tool on the shelf
+      spawnTool();
+    }
+    
+    if (dropFlashTimer > 0) dropFlashTimer--;
+    return; // skip normal movement
+  }
+
+  // === NORMAL MODE ===
+  player.prevY = player.y; // save for one-way platform check
+  const moveLeft = keys['ArrowLeft'] || keys['KeyA'] || touch.left;
+  const moveRight = keys['ArrowRight'] || keys['KeyD'] || touch.right;
+  const jumpPress = keyPressed('Space') || keyPressed('ArrowUp') || keyPressed('KeyW') || (touch.jump && !prevTouchJump);
+
+  player.vx = 0;
+  player.walking = false;
+  if (moveLeft) { player.vx = -MOVE_SPEED; player.facing = -1; player.walking = true; }
+  if (moveRight) { player.vx = MOVE_SPEED; player.facing = 1; player.walking = true; }
+
+  if (jumpPress) {
+    if (player.onGround) {
+      // First jump
+      player.vy = JUMP_FORCE;
+      player.onGround = false;
+      player.jumpsLeft = 1;
+      player.doubleJumpUsed = false;
+      sfxJump();
+    } else if (player.jumpsLeft > 0 && !player.doubleJumpUsed) {
+      // Double jump!
+      player.vy = DOUBLE_JUMP_FORCE;
+      player.jumpsLeft = 0;
+      player.doubleJumpUsed = true;
+      sfxDoubleJump();
+      // Spawn puff particles
+      for (let i = 0; i < 6; i++) {
+        djParticles.push({
+          x: player.x + player.w/2,
+          y: player.y + player.h,
+          vx: (Math.random()-0.5) * 3,
+          vy: Math.random() * 2 + 1,
+          life: 20 + Math.random()*10,
+        });
+      }
+    }
+  }
+
+  player.vy += GRAVITY;
+  player.x += player.vx;
+  player.y += player.vy;
+
+  if (player.x < 0) player.x = 0;
+  if (player.x + player.w > BASE_W) player.x = BASE_W - player.w;
+  if (player.y > BASE_H) { player.y = 476; player.vy = 0; }
+
+  platformCheck(player);
+
+  // Reset jumps when landing
+  if (player.onGround) {
+    player.jumpsLeft = 2;
+    player.doubleJumpUsed = false;
+  }
+
+  if (player.walking) {
+    player.frame += 0.15;
+    // Footstep sounds when on ground
+    if (player.onGround) {
+      footstepTimer++;
+      if (footstepTimer >= 10) { // every 10 frames (~6 per second)
+        sfxFootstep();
+        footstepTimer = 0;
+      }
+    }
+  } else {
+    footstepTimer = 0;
+  }
+  if (dropFlashTimer > 0) dropFlashTimer--;
+
+  // Update double jump particles
+  for (let i = djParticles.length-1; i >= 0; i--) {
+    const p = djParticles[i];
+    p.x += p.vx; p.y += p.vy; p.life--;
+    if (p.life <= 0) djParticles.splice(i, 1);
+  }
+
+  // Pick up tool
+  if (toolSpawn.visible && !carryingTool) {
+    const tr = { x: toolSpawn.x-14, y: toolSpawn.y-14, w: 28, h: 28 };
+    const pr = { x: player.x, y: player.y, w: player.w, h: player.h };
+    if (rectOverlap(pr, tr)) {
+      carryingTool = true;
+      toolSpawn.visible = false;
+      sheepBumps = 0;
+      sfxPickup();
+    }
+  }
+
+  // Deliver to Marty
+  if (carryingTool && !parachuting) {
+    const mr = { x: marty.x-10, y: marty.y-5, w: marty.w+20, h: marty.h+10 };
+    const pr = { x: player.x, y: player.y, w: player.w, h: player.h };
+    if (rectOverlap(pr, mr)) {
+      toolsDelivered++;
+      carryingTool = false; sheepBumps = 0;
+      marty.shouting = false; marty.speechTimer = 0;
+      currentToolIndex++;
+      if (toolsDelivered >= TOOLS.length) {
+        gameState = STATE.WIN;
+        totalTime = Math.floor(gameTimer/60);
+        if (bestTime === null || totalTime < bestTime) bestTime = totalTime;
+        sfxWin();
+      } else {
+        sfxDeliver();
+        // Parachute back down!
+        parachuting = true;
+        player.vy = 0;
+      }
+    }
+  }
+
+  // Sheep collision
+  for (const s of sheep) {
+    const sr = { x: s.x, y: s.y, w: s.w, h: s.h };
+    const pr = { x: player.x, y: player.y, w: player.w, h: player.h };
+    if (rectOverlap(pr, sr)) {
+      if (player.x < s.x) player.x -= 3; else player.x += 3;
+      if (s.baaTimer <= 0) {
+        s.baaTimer = 60;
+        sfxBaa();
+        if (carryingTool) {
+          sheepBumps++;
+          if (sheepBumps >= MAX_BUMPS) {
+            carryingTool = false; sheepBumps = 0;
+            dropFlashTimer = 90;
+            sfxDrop();
+            setTimeout(() => {
+              if (gameState === STATE.PLAYING && !carryingTool) spawnTool();
+            }, 500);
+          }
+        }
+      }
+    }
+  }
+}
+
+function updateSheep() {
+  for (const s of sheep) {
+    const p = platforms[s.platform];
+    s.x += s.vx; s.frame += 0.05;
+    if (s.x < p.x+5) { s.x = p.x+5; s.vx = Math.abs(s.vx); }
+    if (s.x+s.w > p.x+p.w-5) { s.x = p.x+p.w-5-s.w; s.vx = -Math.abs(s.vx); }
+    if (Math.random() < 0.005) s.vx = -s.vx;
+    if (Math.random() < 0.003) s.vx = (Math.random()>0.5?1:-1)*(0.3+Math.random()*0.4);
+    if (s.baaTimer > 0) s.baaTimer--;
+  }
+}
+
+function updateMarty() { marty.speechTimer++; }
+
+// =====================================================
+// DRAW FUNCTIONS
+// =====================================================
+function drawSky() {
+  const grad = ctx.createLinearGradient(0, 0, 0, BASE_H);
+  grad.addColorStop(0, '#87CEEB');
+  grad.addColorStop(0.75, '#c8e6f0');
+  grad.addColorStop(1, '#4a8c3f');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, BASE_W, BASE_H);
+  ctx.fillStyle = 'rgba(255,255,255,0.6)';
+  const cx = (frameCount*0.2)%(BASE_W+100)-50;
+  drawCloud(cx, 25, 40);
+  drawCloud((cx+200)%(BASE_W+100)-50, 50, 30);
+  drawCloud((cx+350)%(BASE_W+100)-50, 15, 35);
+}
+function drawCloud(x, y, sz) {
+  ctx.beginPath();
+  ctx.arc(x, y, sz*0.4, 0, Math.PI*2);
+  ctx.arc(x+sz*0.3, y-sz*0.2, sz*0.35, 0, Math.PI*2);
+  ctx.arc(x+sz*0.6, y, sz*0.38, 0, Math.PI*2);
+  ctx.arc(x+sz*0.3, y+sz*0.1, sz*0.3, 0, Math.PI*2);
+  ctx.fill();
+}
+
+function drawPlatforms() {
+  for (let i = 0; i < platforms.length; i++) {
+    const p = platforms[i];
+    if (i === 0) {
+      ctx.fillStyle = COL.grass;
+      ctx.fillRect(p.x, p.y, p.w, p.h);
+      ctx.fillStyle = COL.grassDark;
+      ctx.fillRect(p.x, p.y, p.w, 4);
+      ctx.fillStyle = '#5a9c4f';
+      for (let gx = 10; gx < p.w; gx += 20) {
+        ctx.fillRect(p.x+gx, p.y-2, 3, 4);
+        ctx.fillRect(p.x+gx+6, p.y-1, 2, 3);
+      }
+    } else {
+      ctx.fillStyle = COL.platform;
+      ctx.fillRect(p.x, p.y, p.w, p.h);
+      ctx.fillStyle = COL.platformTop;
+      ctx.fillRect(p.x, p.y, p.w, 3);
+      ctx.fillStyle = 'rgba(0,0,0,0.08)';
+      for (let gx = p.x+8; gx < p.x+p.w; gx += 16) ctx.fillRect(gx, p.y+4, 8, 2);
+    }
+  }
+}
+
+function drawShelf() {
+  const s = SHELF;
+  ctx.fillStyle = COL.shelfDark;
+  ctx.fillRect(s.x, s.y, s.w, s.h);
+  ctx.fillStyle = COL.shelfWood;
+  ctx.fillRect(s.x-3, s.y-4, s.w+6, 5);
+  ctx.fillStyle = COL.shelfDark;
+  ctx.fillRect(s.x+2, s.y+s.h, 4, 4);
+  ctx.fillRect(s.x+s.w-6, s.y+s.h, 4, 4);
+  ctx.fillStyle = '#ddd';
+  ctx.font = '4px "Press Start 2P"';
+  ctx.textAlign = 'center';
+  ctx.fillText('TOOLS', s.x+s.w/2, s.y+12);
+  ctx.textAlign = 'left';
+}
+
+function drawKitchenProgress() {
+  // Kitchen on the right side of top platform
+  const kx = 130, ky = 70;
+  if (toolsDelivered >= 1) {
+    ctx.fillStyle = COL.cabinet;
+    ctx.fillRect(kx, ky, 30, 28);
+    ctx.fillRect(kx+70, ky, 30, 28);
+    ctx.fillStyle = '#906030';
+    ctx.fillRect(kx+12, ky+8, 6, 6);
+    ctx.fillRect(kx+82, ky+8, 6, 6);
+    ctx.strokeStyle = '#704020'; ctx.lineWidth = 1;
+    ctx.strokeRect(kx, ky, 30, 28);
+    ctx.strokeRect(kx+70, ky, 30, 28);
+  }
+  if (toolsDelivered >= 2) {
+    ctx.fillStyle = COL.worktop;
+    ctx.fillRect(kx-2, ky-4, 106, 6);
+    ctx.fillStyle = '#777';
+    ctx.fillRect(kx-2, ky-4, 106, 2);
+  }
+  if (toolsDelivered >= 3) {
+    ctx.fillStyle = '#b8c8d0';
+    ctx.fillRect(kx+34, ky-2, 28, 12);
+    ctx.fillStyle = '#90a8b8';
+    ctx.fillRect(kx+37, ky+1, 22, 7);
+    ctx.fillStyle = '#ccc';
+    ctx.fillRect(kx+46, ky-10, 4, 10);
+    ctx.fillRect(kx+43, ky-12, 10, 3);
+  }
+  if (toolsDelivered >= 4) {
+    ctx.fillStyle = '#ddd';
+    ctx.fillRect(kx+108, ky, 30, 28);
+    ctx.strokeStyle = '#aaa'; ctx.lineWidth = 1;
+    ctx.strokeRect(kx+108, ky, 30, 28);
+    ctx.strokeStyle = '#333';
+    ctx.beginPath(); ctx.arc(kx+117, ky-1, 4, 0, Math.PI*2); ctx.stroke();
+    ctx.beginPath(); ctx.arc(kx+129, ky-1, 4, 0, Math.PI*2); ctx.stroke();
+  }
+  if (toolsDelivered >= 5) {
+    ctx.fillStyle = 'rgba(200,220,240,0.5)';
+    for (let tx = kx-2; tx < kx+140; tx += 12) {
+      for (let ty = ky-30; ty < ky-4; ty += 10) {
+        ctx.fillRect(tx, ty, 10, 8);
+        ctx.strokeStyle = 'rgba(150,180,200,0.4)'; ctx.lineWidth = 1;
+        ctx.strokeRect(tx, ty, 10, 8);
+      }
+    }
+  }
+}
+
+function drawConn(p) {
+  const x = Math.floor(p.x), y = Math.floor(p.y), f = p.facing;
+  const bob = p.walking ? Math.sin(p.frame*4)*1.5 : 0;
+  const leg = p.walking ? Math.sin(p.frame*4)*3 : 0;
+
+  // Legs
+  ctx.fillStyle = COL.connJeans;
+  ctx.fillRect(x+3, y+16+bob, 5, 8+leg*0.3);
+  ctx.fillRect(x+10, y+16+bob, 5, 8-leg*0.3);
+  // Body
+  ctx.fillStyle = COL.connShirt;
+  ctx.fillRect(x+2, y+8+bob, 14, 10);
+  // Head
+  ctx.fillStyle = COL.connSkin;
+  ctx.fillRect(x+4, y+bob, 10, 10);
+  // Hair
+  ctx.fillStyle = COL.connHair;
+  ctx.fillRect(x+3, y-1+bob, 12, 4);
+  // Eyes
+  ctx.fillStyle = '#222';
+  if (f > 0) ctx.fillRect(x+9, y+3+bob, 2, 2);
+  else ctx.fillRect(x+7, y+3+bob, 2, 2);
+  // Smile
+  ctx.fillStyle = '#c06050';
+  ctx.fillRect(x+8, y+7+bob, 3, 1);
+
+  // Carrying tool
+  if (carryingTool && currentToolIndex < TOOLS.length) {
+    drawToolIcon(x+4, y-14+bob, TOOLS[currentToolIndex], true);
+    if (frameCount%10 < 5) {
+      ctx.fillStyle = COL.starYellow;
+      ctx.fillRect(x+1, y-16+bob, 2, 2);
+      ctx.fillRect(x+15, y-12+bob, 2, 2);
+    }
+  }
+
+  // Bump warning dots
+  if (carryingTool && sheepBumps > 0) {
+    for (let i = 0; i < sheepBumps; i++) {
+      ctx.fillStyle = i < 2 ? '#ff8800' : '#ff0000';
+      ctx.fillRect(x+2+i*6, y-22+bob, 4, 4);
+    }
+  }
+
+  // Double jump indicator — small dot under Conn when he can still double jump
+  if (!player.onGround && player.jumpsLeft > 0 && !player.doubleJumpUsed && !parachuting) {
+    ctx.fillStyle = '#66ffff';
+    ctx.globalAlpha = 0.5 + Math.sin(frameCount*0.2)*0.3;
+    ctx.beginPath();
+    ctx.arc(x+9, y+26+bob, 3, 0, Math.PI*2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+
+  // === PARACHUTE ===
+  if (parachuting) {
+    const sway = Math.sin(frameCount * 0.05) * 4;
+    const cx = x + 9; // centre of Conn
+    const canopyY = y - 28;
+    const canopyW = 36;
+    
+    // Strings
+    ctx.strokeStyle = '#888';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(cx - 2, y - 1);
+    ctx.lineTo(cx - canopyW/2 + sway, canopyY + 8);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(cx + 2, y - 1);
+    ctx.lineTo(cx + canopyW/2 + sway, canopyY + 8);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(cx, y - 1);
+    ctx.lineTo(cx + sway, canopyY + 4);
+    ctx.stroke();
+
+    // Canopy — nice colourful dome
+    ctx.beginPath();
+    ctx.ellipse(cx + sway, canopyY, canopyW/2, 12, 0, Math.PI, 0);
+    ctx.fillStyle = '#e04040';
+    ctx.fill();
+    ctx.strokeStyle = '#c03030';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    
+    // Canopy stripes
+    ctx.fillStyle = '#fff';
+    ctx.beginPath();
+    ctx.ellipse(cx + sway, canopyY, canopyW/2, 12, 0, Math.PI, Math.PI + Math.PI/3);
+    ctx.lineTo(cx + sway - 4, canopyY);
+    ctx.fill();
+    ctx.fillStyle = '#fff';
+    ctx.beginPath();
+    ctx.ellipse(cx + sway, canopyY, canopyW/2, 12, 0, Math.PI + Math.PI*2/3, 0);
+    ctx.lineTo(cx + sway + 4, canopyY);
+    ctx.fill();
+  }
+}
+
+// Double jump puff particles
+function drawDJParticles() {
+  ctx.fillStyle = '#fff';
+  for (const p of djParticles) {
+    ctx.globalAlpha = p.life / 30;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, 2 + (30-p.life)*0.15, 0, Math.PI*2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+}
+
+function drawMarty() {
+  const x = Math.floor(marty.x), y = Math.floor(marty.y);
+  const wave = Math.sin(frameCount*0.1)*4;
+
+  // === BIGGER MARTY (approx 30 wide, 36 tall) ===
+
+  // Shoes
+  ctx.fillStyle = '#333';
+  ctx.fillRect(x+4, y+32, 8, 4);
+  ctx.fillRect(x+18, y+32, 8, 4);
+
+  // Legs
+  ctx.fillStyle = COL.martyJeans;
+  ctx.fillRect(x+5, y+24, 8, 10);
+  ctx.fillRect(x+17, y+24, 8, 10);
+  // Jean detail
+  ctx.fillStyle = '#2a4490';
+  ctx.fillRect(x+9, y+26, 1, 6);
+  ctx.fillRect(x+21, y+26, 1, 6);
+
+  // Body / shirt
+  ctx.fillStyle = COL.martyShirt;
+  ctx.fillRect(x+3, y+12, 24, 14);
+  // Collar
+  ctx.fillStyle = '#c03030';
+  ctx.fillRect(x+10, y+12, 10, 3);
+
+  // Arms
+  ctx.fillStyle = COL.martyShirt;
+  if (marty.shouting) {
+    // Right arm waving up
+    ctx.fillRect(x+25, y+8+wave, 7, 6);
+    // Hand
+    ctx.fillStyle = COL.martySkin;
+    ctx.fillRect(x+27, y+6+wave, 5, 4);
+    // Left arm down
+    ctx.fillStyle = COL.martyShirt;
+    ctx.fillRect(x-2, y+14, 7, 6);
+    ctx.fillStyle = COL.martySkin;
+    ctx.fillRect(x-2, y+19, 5, 4);
+  } else {
+    ctx.fillRect(x+25, y+14, 7, 6);
+    ctx.fillStyle = COL.martySkin;
+    ctx.fillRect(x+27, y+19, 5, 4);
+    ctx.fillStyle = COL.martyShirt;
+    ctx.fillRect(x-2, y+14, 7, 6);
+    ctx.fillStyle = COL.martySkin;
+    ctx.fillRect(x-2, y+19, 5, 4);
+  }
+
+  // Head
+  ctx.fillStyle = COL.martySkin;
+  ctx.fillRect(x+5, y, 20, 14);
+
+  // Hair
+  ctx.fillStyle = COL.martyHair;
+  ctx.fillRect(x+4, y-2, 22, 5);
+  // Side hair
+  ctx.fillRect(x+4, y+2, 3, 4);
+  ctx.fillRect(x+23, y+2, 3, 4);
+
+  // Ears
+  ctx.fillStyle = COL.martySkin;
+  ctx.fillRect(x+3, y+4, 3, 5);
+  ctx.fillRect(x+24, y+4, 3, 5);
+
+  // === GLASSES — wire-frame style ===
+  // Thin wire frame colour
+  ctx.strokeStyle = '#5a5a5a';
+  ctx.lineWidth = 1.2;
+
+  // Left lens outline (rounded rect)
+  ctx.beginPath();
+  ctx.roundRect(x+7, y+4, 8, 6, 1.5);
+  ctx.stroke();
+  // Right lens outline
+  ctx.beginPath();
+  ctx.roundRect(x+17, y+4, 8, 6, 1.5);
+  ctx.stroke();
+
+  // Bridge between lenses
+  ctx.beginPath();
+  ctx.moveTo(x+15, y+6);
+  ctx.lineTo(x+17, y+6);
+  ctx.stroke();
+
+  // Temple arms going to ears
+  ctx.beginPath();
+  ctx.moveTo(x+7, y+6);
+  ctx.lineTo(x+4, y+6);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(x+25, y+6);
+  ctx.lineTo(x+27, y+6);
+  ctx.stroke();
+
+  // Lens tint — subtle blue
+  ctx.fillStyle = 'rgba(100, 160, 220, 0.2)';
+  ctx.beginPath();
+  ctx.roundRect(x+7, y+4, 8, 6, 1.5);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.roundRect(x+17, y+4, 8, 6, 1.5);
+  ctx.fill();
+
+  // Eyes behind the glasses
+  ctx.fillStyle = '#222';
+  ctx.fillRect(x+10, y+6, 2, 2);
+  ctx.fillRect(x+20, y+6, 2, 2);
+
+  // Nose
+  ctx.fillStyle = '#e0aa88';
+  ctx.fillRect(x+14, y+8, 2, 3);
+
+  // Mouth
+  if (marty.shouting) {
+    ctx.fillStyle = '#c06050';
+    ctx.fillRect(x+11, y+11, 8, 3);
+    // Teeth
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(x+13, y+11, 2, 1);
+    ctx.fillRect(x+16, y+11, 2, 1);
+  } else {
+    ctx.fillStyle = '#c06050';
+    ctx.fillRect(x+12, y+11, 6, 2);
+  }
+
+  // Speech bubble
+  if (marty.shouting && currentToolIndex < TOOLS.length) {
+    drawSpeechBubble(x+25, y-18, TOOLS[currentToolIndex].name);
+  } else if (!marty.shouting && marty.speechTimer < 60) {
+    drawSpeechBubble(x+25, y-18, 'NICE ONE!');
+  }
+}
+
+function drawSpeechBubble(x, y, text) {
+  ctx.font = '7px "Press Start 2P"';
+  const mw = ctx.measureText(text).width;
+  const bw = mw+14, bh = 18;
+  const bx = x-bw/2, by = y-bh;
+  // Clamp to screen
+  const cbx = Math.max(2, Math.min(bx, BASE_W - bw - 2));
+
+  ctx.fillStyle = COL.speechBubble;
+  ctx.beginPath(); ctx.roundRect(cbx, by, bw, bh, 4); ctx.fill();
+  ctx.strokeStyle = '#888'; ctx.lineWidth = 1; ctx.stroke();
+  ctx.fillStyle = COL.speechBubble;
+  ctx.beginPath();
+  ctx.moveTo(x-4, by+bh); ctx.lineTo(x, by+bh+6); ctx.lineTo(x+4, by+bh);
+  ctx.fill();
+  ctx.fillStyle = COL.speechText;
+  ctx.font = '7px "Press Start 2P"';
+  ctx.textAlign = 'center';
+  ctx.fillText(text, cbx + bw/2, by+12);
+  ctx.textAlign = 'left';
+  if (frameCount%40 < 20 && marty.shouting) {
+    ctx.fillStyle = 'rgba(255,0,0,0.1)';
+    ctx.beginPath(); ctx.roundRect(cbx, by, bw, bh, 4); ctx.fill();
+  }
+}
+
+function drawToolIcon(x, y, tool, small) {
+  const s = small ? 0.7 : 1;
+  ctx.save(); ctx.translate(x, y); ctx.scale(s, s);
+  if (tool.name === 'HAMMER') {
+    ctx.fillStyle = tool.handleCol; ctx.fillRect(2, 4, 4, 14);
+    ctx.fillStyle = tool.color; ctx.fillRect(-1, 0, 12, 6);
+  } else if (tool.name === 'DRILL') {
+    ctx.fillStyle = tool.handleCol; ctx.fillRect(2, 6, 10, 8);
+    ctx.fillStyle = tool.color; ctx.fillRect(0, 2, 8, 8);
+    ctx.fillStyle = '#aaa'; ctx.fillRect(8, 5, 8, 3);
+  } else if (tool.name === 'SAW') {
+    ctx.fillStyle = tool.handleCol; ctx.fillRect(0, 2, 6, 8);
+    ctx.fillStyle = tool.color; ctx.fillRect(5, 4, 14, 4);
+    ctx.fillStyle = '#888';
+    for (let i = 0; i < 5; i++) ctx.fillRect(6+i*3, 8, 2, 2);
+  } else if (tool.name === 'TAPE MEASURE') {
+    ctx.fillStyle = tool.color;
+    ctx.beginPath(); ctx.arc(7, 7, 7, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#444';
+    ctx.beginPath(); ctx.arc(7, 7, 3, 0, Math.PI*2); ctx.fill();
+  } else if (tool.name === 'SPIRIT LEVEL') {
+    ctx.fillStyle = tool.handleCol; ctx.fillRect(0, 4, 18, 6);
+    ctx.fillStyle = tool.color; ctx.fillRect(6, 5, 6, 4);
+    ctx.fillStyle = '#66ee66'; ctx.fillRect(8, 6, 2, 2);
+  }
+  ctx.restore();
+}
+
+function drawToolOnShelf() {
+  if (!toolSpawn.visible) return;
+  const x = toolSpawn.x, y = toolSpawn.y;
+  const glow = Math.sin(frameCount*0.08)*0.3+0.5;
+  ctx.fillStyle = `rgba(255,215,0,${glow*0.3})`;
+  ctx.beginPath(); ctx.arc(x, y-4, 16, 0, Math.PI*2); ctx.fill();
+  const ab = Math.sin(frameCount*0.1)*4;
+  ctx.fillStyle = COL.starYellow;
+  ctx.beginPath();
+  ctx.moveTo(x, y-28+ab); ctx.lineTo(x-5, y-22+ab); ctx.lineTo(x+5, y-22+ab);
+  ctx.fill();
+  if (currentToolIndex < TOOLS.length) drawToolIcon(x-7, y-12, TOOLS[currentToolIndex], false);
+}
+
+function drawDropFlash() {
+  if (dropFlashTimer <= 0) return;
+  ctx.globalAlpha = Math.min(dropFlashTimer/60, 1);
+  ctx.fillStyle = '#ff4444'; ctx.font = '12px "Press Start 2P"';
+  ctx.textAlign = 'center';
+  ctx.fillText('DROPPED!', BASE_W/2, BASE_H/2-20);
+  ctx.fillStyle = '#fff'; ctx.font = '8px "Press Start 2P"';
+  ctx.fillText('Too many sheep bumps!', BASE_W/2, BASE_H/2);
+  ctx.fillText('Back to the shelf!', BASE_W/2, BASE_H/2+14);
+  ctx.textAlign = 'left';
+  ctx.globalAlpha = 1;
+}
+
+function drawSheep(s) {
+  const x = Math.floor(s.x), y = Math.floor(s.y);
+  const bob = Math.sin(s.frame*3)*0.5;
+  const facing = s.vx >= 0 ? 1 : -1;
+  const legOff = Math.sin(s.frame*3)*1.5;
+  ctx.fillStyle = COL.sheepLegs;
+  ctx.fillRect(x+3, y+10+bob, 3, 6+legOff);
+  ctx.fillRect(x+17, y+10+bob, 3, 6-legOff);
+  ctx.fillStyle = COL.sheepBody;
+  ctx.beginPath();
+  ctx.ellipse(x+12, y+6+bob, 13, 8, 0, 0, Math.PI*2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(x+4, y+3+bob, 5, 0, Math.PI*2);
+  ctx.arc(x+12, y+1+bob, 5, 0, Math.PI*2);
+  ctx.arc(x+20, y+3+bob, 5, 0, Math.PI*2);
+  ctx.fill();
+  ctx.fillStyle = COL.sheepFace;
+  const fx = facing > 0 ? x+20 : x;
+  ctx.fillRect(fx, y+2+bob, 6, 8);
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(fx+2, y+3+bob, 3, 3);
+  ctx.fillStyle = '#000';
+  ctx.fillRect(fx+3, y+4+bob, 1, 1);
+  if (s.baaTimer > 30) {
+    ctx.fillStyle = '#fff'; ctx.font = '8px "Press Start 2P"';
+    ctx.textAlign = 'center';
+    ctx.globalAlpha = s.baaTimer/60;
+    ctx.fillText('BAA!', x+12, y-8);
+    ctx.globalAlpha = 1; ctx.textAlign = 'left';
+  }
+}
+
+// =====================================================
+// TITLE SCREEN
+// =====================================================
+function drawTitle() {
+  const grad = ctx.createLinearGradient(0, 0, 0, BASE_H);
+  grad.addColorStop(0, '#2c5f2d'); grad.addColorStop(1, '#1a3a1a');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, BASE_W, BASE_H);
+
+  titleBounce += 0.03;
+  ctx.fillStyle = COL.sheepBody;
+  for (let i = 0; i < 5; i++) {
+    const sx = 40+i*95, sy = 340+Math.sin(titleBounce+i*2)*8;
+    ctx.beginPath(); ctx.ellipse(sx, sy, 18, 12, 0, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = COL.sheepFace;
+    ctx.fillRect(sx+14, sy-5, 8, 10);
+    ctx.fillStyle = COL.sheepBody;
+  }
+
+  ctx.fillStyle = COL.grass;
+  ctx.fillRect(0, 370, BASE_W, 70);
+
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#ffd700'; ctx.font = '22px "Press Start 2P"';
+  ctx.fillText("MARTY'S", BASE_W/2, 80);
+  ctx.fillText('KITCHEN', BASE_W/2, 115);
+
+  ctx.fillStyle = '#fff'; ctx.font = '10px "Press Start 2P"';
+  ctx.fillText('Help Dad build the kitchen!', BASE_W/2, 155);
+  ctx.fillStyle = '#ffaa44'; ctx.font = '7px "Press Start 2P"';
+  ctx.fillText('Watch out for the sheep!', BASE_W/2, 175);
+  ctx.fillStyle = '#66ffff'; ctx.font = '7px "Press Start 2P"';
+  ctx.fillText('Tap JUMP twice for a double jump!', BASE_W/2, 192);
+
+  // Bigger Marty on title screen
+  const mx = 200, my = 215;
+  // Body
+  ctx.fillStyle = COL.martyShirt; ctx.fillRect(mx+3, my+12, 24, 14);
+  ctx.fillStyle = COL.martyJeans;
+  ctx.fillRect(mx+5, my+24, 8, 10); ctx.fillRect(mx+17, my+24, 8, 10);
+  ctx.fillStyle = '#333';
+  ctx.fillRect(mx+4, my+32, 8, 4); ctx.fillRect(mx+18, my+32, 8, 4);
+  // Head
+  ctx.fillStyle = COL.martySkin; ctx.fillRect(mx+5, my, 20, 14);
+  ctx.fillStyle = COL.martyHair; ctx.fillRect(mx+4, my-2, 22, 5);
+  // Title glasses
+  ctx.strokeStyle = '#5a5a5a'; ctx.lineWidth = 1.2;
+  ctx.beginPath(); ctx.roundRect(mx+7, my+4, 8, 6, 1.5); ctx.stroke();
+  ctx.beginPath(); ctx.roundRect(mx+17, my+4, 8, 6, 1.5); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(mx+15, my+6); ctx.lineTo(mx+17, my+6); ctx.stroke();
+  ctx.fillStyle = 'rgba(100,160,220,0.2)';
+  ctx.beginPath(); ctx.roundRect(mx+7, my+4, 8, 6, 1.5); ctx.fill();
+  ctx.beginPath(); ctx.roundRect(mx+17, my+4, 8, 6, 1.5); ctx.fill();
+  // Eyes
+  ctx.fillStyle = '#222';
+  ctx.fillRect(mx+10, my+6, 2, 2); ctx.fillRect(mx+20, my+6, 2, 2);
+  // Smile
+  ctx.fillStyle = '#c06050'; ctx.fillRect(mx+12, my+11, 6, 2);
+
+  for (let i = 0; i < TOOLS.length; i++) drawToolIcon(100+i*60, 270, TOOLS[i], false);
+
+  if (Math.floor(frameCount/30)%2 === 0) {
+    ctx.fillStyle = '#ffd700'; ctx.font = '11px "Press Start 2P"';
+    ctx.fillText('PRESS SPACE OR TAP JUMP', BASE_W/2, 310);
+  }
+  ctx.textAlign = 'left';
+}
+
+// =====================================================
+// WIN SCREEN
+// =====================================================
+function drawWin() {
+  drawSky(); drawPlatforms(); drawShelf();
+  drawKitchenProgress(); drawMarty(); drawConn(player);
+  sheep.forEach(drawSheep);
+
+  ctx.fillStyle = 'rgba(0,0,0,0.4)';
+  ctx.fillRect(0, 0, BASE_W, BASE_H);
+
+  ctx.fillStyle = COL.starYellow;
+  for (let i = 0; i < 20; i++) {
+    const sx = (frameCount*0.5+i*67)%BASE_W;
+    const sy = (i*43+Math.sin(frameCount*0.05+i)*20)%(BASE_H-50);
+    ctx.fillRect(sx, sy, 3, 3);
+  }
+
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#ffd700'; ctx.font = '20px "Press Start 2P"';
+  ctx.fillText('KITCHEN DONE!', BASE_W/2, 160);
+  ctx.fillStyle = '#fff'; ctx.font = '12px "Press Start 2P"';
+  ctx.fillText('Great job helping Dad!', BASE_W/2, 200);
+  ctx.font = '14px "Press Start 2P"';
+  ctx.fillText('TIME: '+totalTime+' seconds', BASE_W/2, 240);
+  if (bestTime !== null) {
+    ctx.fillStyle = '#ffd700'; ctx.font = '10px "Press Start 2P"';
+    ctx.fillText('BEST: '+bestTime+'s', BASE_W/2, 270);
+  }
+  if (frameCount%40 < 25) {
+    ctx.fillStyle = '#ffd700'; ctx.font = '10px "Press Start 2P"';
+    ctx.fillText('PRESS SPACE TO PLAY AGAIN', BASE_W/2, 310);
+  }
+  ctx.textAlign = 'left';
+}
+
+// =====================================================
+// GAME LOOP
+// =====================================================
+function startGame() {
+  try { getAudio().resume(); } catch(e) {}
+  toolsDelivered = 0; currentToolIndex = 0;
+  carryingTool = false; sheepBumps = 0; dropFlashTimer = 0; gameTimer = 0;
+  parachuting = false;
+  djParticles = [];
+  player.x = 60; player.y = 476; player.vx = 0; player.vy = 0;
+  player.onGround = true; player.jumpsLeft = 2; player.doubleJumpUsed = false;
+  player.prevY = 476;
+  spawnSheep(); spawnTool();
+  gameState = STATE.PLAYING;
+}
+
+function update() {
+  frameCount++;
+  if (gameState === STATE.TITLE) {
+    if (keyPressed('Space') || keyPressed('Enter') || (touch.jump && !prevTouchJump)) startGame();
+  } else if (gameState === STATE.PLAYING) {
+    gameTimer++;
+    updatePlayer(); updateSheep(); updateMarty();
+  } else if (gameState === STATE.WIN) {
+    if (keyPressed('Space') || keyPressed('Enter') || (touch.jump && !prevTouchJump)) gameState = STATE.TITLE;
+  }
+  for (const k in keys) prevKeys[k] = keys[k];
+  prevTouchJump = touch.jump;
+  document.getElementById('toolsDisplay').textContent = toolsDelivered;
+  document.getElementById('bumpsDisplay').textContent = carryingTool ? sheepBumps : 0;
+  document.getElementById('timeDisplay').textContent = Math.floor(gameTimer/60);
+  document.getElementById('bestDisplay').textContent = bestTime !== null ? bestTime+'s' : '-';
+}
+
+function draw() {
+  ctx.clearRect(0, 0, BASE_W, BASE_H);
+  if (gameState === STATE.TITLE) { drawTitle(); }
+  else if (gameState === STATE.PLAYING) {
+    drawSky(); drawPlatforms(); drawShelf(); drawKitchenProgress();
+    drawToolOnShelf(); sheep.forEach(drawSheep);
+    drawMarty(); drawDJParticles(); drawConn(player); drawDropFlash();
+  }
+  else if (gameState === STATE.WIN) { drawWin(); }
+}
+
+function loop() { update(); draw(); requestAnimationFrame(loop); }
+loop();
+</script>
+</body>
+</html>
