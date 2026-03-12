@@ -93,6 +93,7 @@ let frameCount = 0, toolsDelivered = 0, totalTime = 0, bestTime = null;
 let gameTimer = 0, currentToolIndex = 0, carryingTool = false;
 let sheepBumps = 0, dropFlashTimer = 0, titleBounce = 0;
 let parachuting = false;
+let pickupFlashTimer = 0;
 const MAX_BUMPS = 3;
 const PARACHUTE_SPEED = 1.2;
 
@@ -544,6 +545,7 @@ function updatePlayer() {
     footstepTimer = 0;
   }
   if (dropFlashTimer > 0) dropFlashTimer--;
+  if (pickupFlashTimer > 0) pickupFlashTimer--;
 
   // Update double jump particles
   for (let i = djParticles.length-1; i >= 0; i--) {
@@ -552,15 +554,16 @@ function updatePlayer() {
     if (p.life <= 0) djParticles.splice(i, 1);
   }
 
-  // Pick up tool
+  // Pick up tool — must walk right up to the shelf
   if (toolSpawn.visible && !carryingTool) {
-    const tr = { x: toolSpawn.x-14, y: toolSpawn.y-14, w: 28, h: 28 };
+    const tr = { x: toolSpawn.x-10, y: toolSpawn.y-10, w: 20, h: 20 };
     const pr = { x: player.x, y: player.y, w: player.w, h: player.h };
     if (rectOverlap(pr, tr)) {
       carryingTool = true;
       toolSpawn.visible = false;
       sheepBumps = 0;
       sfxPickup();
+      pickupFlashTimer = 40; // flash "GOT IT!" briefly
     }
   }
 
@@ -1069,6 +1072,19 @@ function drawDropFlash() {
   ctx.globalAlpha = 1;
 }
 
+function drawPickupFlash() {
+  if (pickupFlashTimer <= 0) return;
+  // Flash near the player
+  const x = Math.floor(player.x) + 9;
+  const y = Math.floor(player.y) - 30;
+  ctx.globalAlpha = Math.min(pickupFlashTimer/20, 1);
+  ctx.fillStyle = '#ffd700'; ctx.font = '10px "Press Start 2P"';
+  ctx.textAlign = 'center';
+  ctx.fillText('GOT IT!', x, y - (40 - pickupFlashTimer) * 0.5);
+  ctx.textAlign = 'left';
+  ctx.globalAlpha = 1;
+}
+
 function drawSheep(s) {
   const x = Math.floor(s.x), y = Math.floor(s.y);
   const bob = Math.sin(s.frame*3)*0.5;
@@ -1212,7 +1228,7 @@ function drawWin() {
 function startGame() {
   try { getAudio().resume(); } catch(e) {}
   toolsDelivered = 0; currentToolIndex = 0;
-  carryingTool = false; sheepBumps = 0; dropFlashTimer = 0; gameTimer = 0;
+  carryingTool = false; sheepBumps = 0; dropFlashTimer = 0; pickupFlashTimer = 0; gameTimer = 0;
   parachuting = false;
   djParticles = [];
   player.x = 60; player.y = 476; player.vx = 0; player.vy = 0;
@@ -1246,7 +1262,7 @@ function draw() {
   else if (gameState === STATE.PLAYING) {
     drawSky(); drawPlatforms(); drawShelf(); drawKitchenProgress();
     drawToolOnShelf(); sheep.forEach(drawSheep);
-    drawMarty(); drawDJParticles(); drawConn(player); drawDropFlash();
+    drawMarty(); drawDJParticles(); drawConn(player); drawDropFlash(); drawPickupFlash();
   }
   else if (gameState === STATE.WIN) { drawWin(); }
 }
