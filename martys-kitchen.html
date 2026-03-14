@@ -106,17 +106,28 @@ let initialsCursor = 0; // which letter (0-2) we're entering
 const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
 let selectedLetterIndex = 0; // which letter in ALPHABET is highlighted
 
+let leaderboardStatus = 'loading'; // 'loading', 'loaded', 'error'
+
 // Load leaderboard on page load
 async function loadLeaderboard() {
+  leaderboardStatus = 'loading';
   try {
     const res = await fetch(BLOB_URL, {
-      headers: { 'Accept': 'application/json' }
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' }
     });
     if (res.ok) {
       const data = await res.json();
       leaderboard = (data.scores || []).sort((a,b) => a.time - b.time).slice(0, 5);
+      leaderboardStatus = 'loaded';
+    } else {
+      leaderboardStatus = 'error';
+      console.log('Leaderboard HTTP error:', res.status);
     }
-  } catch(e) { console.log('Could not load leaderboard:', e); }
+  } catch(e) {
+    leaderboardStatus = 'error';
+    console.log('Could not load leaderboard:', e);
+  }
 }
 
 async function saveLeaderboard(initials, time) {
@@ -1402,17 +1413,28 @@ function drawInitials() {
 // DRAW LEADERBOARD ON TITLE SCREEN
 // =====================================================
 function drawLeaderboardOnTitle() {
-  if (leaderboard.length === 0) return;
   const startY = 390;
   ctx.textAlign = 'center';
   ctx.fillStyle = '#ffd700'; ctx.font = '9px "Press Start 2P"';
   ctx.fillText('- HIGH SCORES -', BASE_W/2, startY);
-  ctx.font = '8px "Press Start 2P"';
-  for (let i = 0; i < leaderboard.length && i < 5; i++) {
-    const s = leaderboard[i];
-    ctx.fillStyle = i === 0 ? '#ffd700' : '#fff';
-    const rank = i === 0 ? '\u2605 ' : (i+1) + '. ';
-    ctx.fillText(rank + s.initials + '   ' + s.time + 's', BASE_W/2, startY + 18 + i*18);
+  
+  if (leaderboardStatus === 'loading') {
+    ctx.fillStyle = '#aaa'; ctx.font = '7px "Press Start 2P"';
+    ctx.fillText('LOADING...', BASE_W/2, startY + 20);
+  } else if (leaderboardStatus === 'error') {
+    ctx.fillStyle = '#aa6666'; ctx.font = '7px "Press Start 2P"';
+    ctx.fillText('COULD NOT LOAD SCORES', BASE_W/2, startY + 20);
+  } else if (leaderboard.length === 0) {
+    ctx.fillStyle = '#aaa'; ctx.font = '7px "Press Start 2P"';
+    ctx.fillText('NO SCORES YET - BE THE FIRST!', BASE_W/2, startY + 20);
+  } else {
+    ctx.font = '8px "Press Start 2P"';
+    for (let i = 0; i < leaderboard.length && i < 5; i++) {
+      const s = leaderboard[i];
+      ctx.fillStyle = i === 0 ? '#ffd700' : '#fff';
+      const rank = i === 0 ? '\u2605 ' : (i+1) + '. ';
+      ctx.fillText(rank + s.initials + '   ' + s.time + 's', BASE_W/2, startY + 18 + i*18);
+    }
   }
   ctx.textAlign = 'left';
 }
