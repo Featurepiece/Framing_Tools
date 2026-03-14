@@ -98,8 +98,7 @@ let pickupFlashTimer = 0;
 // =====================================================
 // LEADERBOARD
 // =====================================================
-const BLOB_ID = '019ce410-29da-718d-b354-a8fc7464aaec';
-const BLOB_URL = 'https://jsonblob.com/api/jsonBlob/' + BLOB_ID;
+const BLOB_URL = 'https://api.npoint.io/ec89c29aacd7f096ee3b';
 let leaderboard = []; // [{initials:'CON', time:45}, ...]
 let playerInitials = '';
 let initialsCursor = 0; // which letter (0-2) we're entering
@@ -112,10 +111,7 @@ let leaderboardStatus = 'loading'; // 'loading', 'loaded', 'error'
 async function loadLeaderboard() {
   leaderboardStatus = 'loading';
   try {
-    const res = await fetch(BLOB_URL, {
-      method: 'GET',
-      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' }
-    });
+    const res = await fetch(BLOB_URL);
     if (res.ok) {
       const data = await res.json();
       leaderboard = (data.scores || []).sort((a,b) => a.time - b.time).slice(0, 5);
@@ -132,12 +128,10 @@ async function loadLeaderboard() {
 
 async function saveLeaderboard(initials, time) {
   try {
-    // Fetch current scores from server first (in case another device added scores)
+    // Fetch current scores from server first
     let currentScores = [];
     try {
-      const res = await fetch(BLOB_URL, {
-        headers: { 'Accept': 'application/json' }
-      });
+      const res = await fetch(BLOB_URL);
       if (res.ok) {
         const data = await res.json();
         currentScores = data.scores || [];
@@ -146,14 +140,13 @@ async function saveLeaderboard(initials, time) {
 
     // Add new score
     currentScores.push({ initials, time });
-    // Sort by fastest time and keep top 10
     currentScores.sort((a, b) => a.time - b.time);
     currentScores = currentScores.slice(0, 10);
 
     // Save back to server
     await fetch(BLOB_URL, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ scores: currentScores })
     });
 
