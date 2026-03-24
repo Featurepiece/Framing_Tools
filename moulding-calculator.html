@@ -17,272 +17,218 @@
             --accent-hover: #b8956a;
             --border: #e8e4df;
             --shadow: rgba(44, 62, 80, 0.08);
+            --col-long: #4a7a9b;
+            --col-short: #5b8c7b;
+            --col-waste: #d4d0cb;
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; }
-
-        .menu-btn {
-            position: fixed;
-            top: 20px;
-            left: 20px;
-            padding: 8px 14px;
-            background: var(--bg-secondary);
-            color: var(--text-primary);
-            text-decoration: none;
-            border-radius: 6px;
-            font-size: 0.85rem;
-            font-weight: 500;
-            box-shadow: 0 2px 8px var(--shadow);
-            transition: all 0.2s;
-            z-index: 100;
-        }
-
-        .menu-btn:hover {
-            background: var(--accent);
-            color: var(--text-light);
-        }
 
         body {
             font-family: 'DM Sans', sans-serif;
             background: var(--bg-primary);
             color: var(--text-primary);
-            padding: 30px 20px;
+            padding: 20px;
             min-height: 100vh;
             line-height: 1.6;
         }
 
-        .container { max-width: 1000px; margin: 0 auto; }
+        .menu-btn {
+            display: inline-block;
+            margin-bottom: 12px;
+            color: var(--accent);
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 0.9rem;
+        }
+        .menu-btn:hover { color: var(--accent-hover); }
 
-        header { text-align: center; margin-bottom: 20px; }
+        header { text-align: center; margin-bottom: 16px; }
 
         h1 {
             font-family: 'Playfair Display', serif;
-            font-size: 2rem;
+            font-size: 1.8rem;
             font-weight: 500;
             color: var(--text-primary);
-            margin-bottom: 4px;
+            margin-bottom: 2px;
         }
 
-        .subtitle { color: var(--text-secondary); font-size: 0.95rem; }
+        .subtitle { color: var(--text-secondary); font-size: 0.9rem; }
 
         .controls-row {
             display: flex;
-            gap: 12px;
-            margin-bottom: 20px;
+            gap: 10px;
+            margin-bottom: 16px;
             flex-wrap: wrap;
             justify-content: center;
         }
 
-        .unit-toggle, .mode-toggle {
+        .mode-toggle, .unit-toggle {
             display: flex;
             background: var(--bg-secondary);
-            border-radius: 6px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
             overflow: hidden;
-            box-shadow: 0 2px 8px var(--shadow);
         }
 
-        .unit-toggle button, .mode-toggle button {
-            padding: 8px 16px;
+        .mode-toggle button, .unit-toggle button {
+            padding: 7px 14px;
             border: none;
-            background: var(--bg-secondary);
-            cursor: pointer;
+            background: transparent;
             font-family: 'DM Sans', sans-serif;
-            font-size: 0.85rem;
+            font-size: 0.82rem;
             font-weight: 500;
-            color: var(--text-primary);
+            color: var(--text-secondary);
+            cursor: pointer;
             transition: all 0.2s;
         }
 
-        .unit-toggle button.active, .mode-toggle button.active {
-            background: var(--accent);
+        .mode-toggle button.active, .unit-toggle button.active {
+            background: var(--bg-accent);
             color: var(--text-light);
         }
 
-        .unit-toggle button:hover:not(.active), .mode-toggle button:hover:not(.active) {
-            background: var(--border);
-        }
-
+        /* Two-column layout */
         .main-layout {
             display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
+            grid-template-columns: 340px 1fr;
+            gap: 16px;
             align-items: start;
         }
 
-        @media (max-width: 800px) {
-            .main-layout { grid-template-columns: 1fr; }
-        }
+        .left-col { min-width: 0; }
+        .right-col { min-width: 0; }
 
         .panel {
             background: var(--bg-secondary);
-            border-radius: 12px;
-            padding: 20px;
-            box-shadow: 0 2px 12px var(--shadow);
-            margin-bottom: 16px;
+            border-radius: 10px;
+            padding: 18px;
+            margin-bottom: 12px;
+            box-shadow: 0 2px 8px var(--shadow);
         }
 
-        .panel:last-child { margin-bottom: 0; }
-
-        .panel h2 {
+        .panel-title {
             font-family: 'Playfair Display', serif;
-            font-size: 1.1rem;
+            font-size: 1rem;
             font-weight: 500;
+            margin-bottom: 12px;
             color: var(--text-primary);
-            margin-bottom: 14px;
-            padding-bottom: 10px;
-            border-bottom: 1px solid var(--border);
         }
 
         .input-group {
             display: flex;
-            gap: 12px;
-            margin-bottom: 14px;
+            gap: 10px;
+            margin-bottom: 10px;
         }
 
-        .input-field { flex: 1; min-width: 80px; }
+        .field { flex: 1; }
 
-        .input-field label {
+        .field label {
             display: block;
-            font-size: 0.8rem;
-            color: var(--text-secondary);
-            margin-bottom: 4px;
+            font-size: 0.75rem;
             font-weight: 500;
+            color: var(--text-secondary);
+            margin-bottom: 3px;
         }
 
-        .input-field input {
+        .field input {
             width: 100%;
             padding: 8px 10px;
             border: 1px solid var(--border);
             border-radius: 6px;
             font-family: 'DM Sans', sans-serif;
-            font-size: 0.95rem;
+            font-size: 0.92rem;
+            color: var(--text-primary);
+            background: var(--bg-primary);
             transition: border-color 0.2s;
         }
 
-        .input-field input:focus {
+        .field input:focus {
             outline: none;
             border-color: var(--accent);
-        }
-
-        .input-field .unit-label {
-            font-size: 0.75rem;
-            color: var(--text-secondary);
-            margin-top: 2px;
-        }
-
-        .input-field-full {
-            margin-bottom: 14px;
-        }
-
-        .input-field-full label {
-            display: block;
-            font-size: 0.8rem;
-            color: var(--text-secondary);
-            margin-bottom: 4px;
-            font-weight: 500;
-        }
-
-        .input-field-full input {
-            width: 100%;
-            padding: 8px 10px;
-            border: 1px solid var(--border);
-            border-radius: 6px;
-            font-family: 'DM Sans', sans-serif;
-            font-size: 0.95rem;
-            transition: border-color 0.2s;
-        }
-
-        .input-field-full input:focus {
-            outline: none;
-            border-color: var(--accent);
-        }
-
-        .input-field-full .unit-label {
-            font-size: 0.75rem;
-            color: var(--text-secondary);
-            margin-top: 2px;
-        }
-
-        .unit-label-fixed {
-            font-size: 0.75rem;
-            color: var(--accent);
-            margin-top: 2px;
-            font-weight: 500;
         }
 
         .mount-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 12px;
-            margin-bottom: 14px;
+            gap: 8px;
+            margin-bottom: 10px;
         }
 
-        .equal-button {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            padding: 6px 12px;
-            background: var(--bg-primary);
-            border: 1px solid var(--border);
+        .equal-btn {
+            display: inline-block;
+            padding: 5px 12px;
+            background: var(--bg-accent);
+            color: var(--text-light);
+            border: none;
             border-radius: 6px;
             font-family: 'DM Sans', sans-serif;
-            font-size: 0.8rem;
+            font-size: 0.75rem;
             font-weight: 500;
-            color: var(--text-primary);
             cursor: pointer;
-            transition: all 0.2s;
-            margin-bottom: 14px;
+            transition: background 0.2s;
+            margin-bottom: 6px;
         }
 
-        .equal-button:hover {
-            background: var(--border);
+        .equal-btn:hover { background: #3d5269; }
+
+        .moulding-unit-note {
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+            margin-top: 2px;
+            font-style: italic;
         }
 
+        .extras-row {
+            display: flex;
+            gap: 10px;
+            margin-top: 6px;
+        }
+
+        /* Results */
         .results {
             background: var(--bg-primary);
             border-radius: 8px;
-            padding: 20px;
+            padding: 16px;
             border-left: 4px solid var(--accent);
         }
 
         .result-item {
             text-align: center;
-            margin-bottom: 16px;
+            margin-bottom: 12px;
         }
 
-        .result-item:last-child {
-            margin-bottom: 0;
-        }
+        .result-item:last-child { margin-bottom: 0; }
 
         .result-label {
-            font-size: 0.85rem;
+            font-size: 0.8rem;
             color: var(--text-secondary);
-            margin-bottom: 8px;
+            margin-bottom: 4px;
             font-weight: 500;
         }
 
         .result-value {
             font-family: 'Playfair Display', serif;
-            font-size: 2.2rem;
+            font-size: 1.8rem;
             font-weight: 600;
             color: var(--accent);
         }
 
         .result-value-secondary {
-            font-size: 1.1rem;
+            font-size: 0.88rem;
             color: var(--text-secondary);
-            margin-top: 4px;
+            margin-top: 3px;
         }
 
         .result-dimensions {
-            font-size: 1.1rem;
+            font-size: 1rem;
             color: var(--accent);
             font-weight: 600;
-            margin-top: 4px;
+            margin-top: 3px;
         }
 
         .result-dimensions-secondary {
-            font-size: 0.9rem;
+            font-size: 0.82rem;
             color: var(--text-secondary);
             margin-top: 2px;
         }
@@ -290,298 +236,514 @@
         .result-separator {
             height: 1px;
             background: var(--border);
-            margin: 16px 0;
+            margin: 12px 0;
         }
+
+        .result-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            text-align: center;
+        }
+
+        .result-grid .result-value { font-size: 1.3rem; }
 
         #placeholder {
             text-align: center;
-            padding: 40px 20px;
+            padding: 30px 16px;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        /* Bar diagram */
+        .bar-label-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 5px;
+        }
+
+        .bar-label-text {
+            font-size: 0.75rem;
+            font-weight: 600;
             color: var(--text-secondary);
         }
 
-        @media (max-width: 600px) {
-            body { padding: 20px 12px; }
-            h1 { font-size: 1.75rem; }
-            .input-group { flex-direction: column; gap: 10px; }
+        .bar-track {
+            width: 100%;
+            height: 30px;
+            background: var(--col-waste);
+            border-radius: 4px;
+            display: flex;
+            overflow: visible;
+            border: 1px solid var(--border);
+            position: relative;
+        }
+
+        .bar-piece {
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.6rem;
+            font-weight: 600;
+            color: var(--text-light);
+            min-width: 2px;
+            position: relative;
+        }
+
+        .bar-piece.long-side { background: var(--col-long); }
+        .bar-piece.short-side { background: var(--col-short); }
+        .bar-piece.offcut { background: var(--col-waste); }
+
+        .bar-piece .piece-label {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            padding: 0 3px;
+            font-size: 0.58rem;
+        }
+
+        .bar-piece.offcut .piece-label { color: var(--text-secondary); }
+
+        .cut-mark {
+            position: absolute;
+            top: -4px;
+            right: 0;
+            width: 2px;
+            height: 38px;
+            background: var(--text-primary);
+            z-index: 2;
+        }
+
+        .bar-gap { margin-bottom: 14px; }
+
+        .bar-legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-top: 12px;
+            justify-content: center;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 0.72rem;
+            color: var(--text-secondary);
+        }
+
+        .legend-swatch {
+            width: 10px;
+            height: 10px;
+            border-radius: 2px;
+        }
+
+        .cutting-summary {
+            margin-top: 14px;
+            padding: 12px 14px;
+            background: var(--bg-primary);
+            border-radius: 8px;
+            border-left: 4px solid var(--accent);
+        }
+
+        .summary-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 3px 0;
+            font-size: 0.8rem;
+        }
+
+        .summary-label { color: var(--text-secondary); }
+
+        .summary-value {
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .summary-value.waste-highlight { color: var(--accent); }
+
+        @media (max-width: 780px) {
+            .main-layout {
+                grid-template-columns: 1fr;
+            }
+            body { padding: 16px 12px; }
+            h1 { font-size: 1.6rem; }
+            .input-group { flex-direction: column; gap: 8px; }
             .mount-grid { grid-template-columns: 1fr; }
-            .result-value { font-size: 1.8rem; }
+            .extras-row { flex-direction: column; }
+            .result-value { font-size: 1.5rem; }
+            .result-grid .result-value { font-size: 1.2rem; }
         }
     </style>
 </head>
 <body>
-    <a href="index.html" class="menu-btn">← Menu</a>
-    <div class="container">
-        <header>
-            <h1>Moulding Calculator</h1>
-            <p class="subtitle">Calculate required moulding length for frames</p>
-        </header>
+    <a href="index.html" class="menu-btn">&larr; Menu</a>
+    <header>
+        <h1>Moulding Calculator</h1>
+        <p class="subtitle">Calculate required moulding length for frames</p>
+    </header>
 
-        <div class="controls-row">
-            <div class="mode-toggle">
-                <button id="btn-direct" class="active" onclick="setMode('direct')">Direct Entry</button>
-                <button id="btn-artwork" onclick="setMode('artwork')">Calculate from Artwork</button>
+    <div class="controls-row">
+        <div class="mode-toggle">
+            <button id="btn-direct" class="active" onclick="setMode('direct')">Direct Entry</button>
+            <button id="btn-artwork" onclick="setMode('artwork')">Calculate from Artwork</button>
+        </div>
+        <div class="unit-toggle">
+            <button id="btn-mm" class="active" onclick="setUnit('mm')">mm</button>
+            <button id="btn-inches" onclick="setUnit('inches')">inches</button>
+        </div>
+    </div>
+
+    <div class="main-layout">
+        <!-- LEFT COLUMN: Inputs -->
+        <div class="left-col">
+            <!-- Direct Entry Mode -->
+            <div id="direct-panel" class="panel">
+                <div class="panel-title">Glass Size</div>
+                <div class="input-group">
+                    <div class="field">
+                        <label>Width (Glass Size)</label>
+                        <input type="number" id="glass-width" oninput="liveUpdate()">
+                    </div>
+                    <div class="field">
+                        <label>Height (Glass Size)</label>
+                        <input type="number" id="glass-height" oninput="liveUpdate()">
+                    </div>
+                </div>
+                <div class="field" style="max-width:180px;">
+                    <label>Moulding Width</label>
+                    <input type="number" id="moulding-width-direct" oninput="liveUpdate()">
+                    <div class="moulding-unit-note">Always in mm</div>
+                </div>
+                <div class="extras-row">
+                    <div class="field">
+                        <label>Number of Frames</label>
+                        <input type="number" id="num-frames-direct" value="1" min="1" oninput="liveUpdate()">
+                    </div>
+                    <div class="field">
+                        <label>Length Size (mm)</label>
+                        <input type="number" id="stock-length-direct" value="3000" min="1" oninput="liveUpdate()">
+                    </div>
+                </div>
             </div>
-            <div class="unit-toggle">
-                <button id="btn-mm" class="active" onclick="setUnit('mm')">mm</button>
-                <button id="btn-inch" onclick="setUnit('inch')">inches</button>
+
+            <!-- Artwork Mode -->
+            <div id="artwork-panel" class="panel" style="display:none;">
+                <div class="panel-title">Artwork Size</div>
+                <div class="input-group">
+                    <div class="field">
+                        <label>Width</label>
+                        <input type="number" id="artwork-width" oninput="liveUpdate()">
+                    </div>
+                    <div class="field">
+                        <label>Height</label>
+                        <input type="number" id="artwork-height" oninput="liveUpdate()">
+                    </div>
+                </div>
+
+                <div class="panel-title" style="margin-top:10px;">Mount Widths</div>
+                <button class="equal-btn" onclick="equalAllSides()">Equal All Sides</button>
+                <div class="mount-grid">
+                    <div class="field">
+                        <label>Top</label>
+                        <input type="number" id="mount-top" value="0" oninput="liveUpdate()">
+                    </div>
+                    <div class="field">
+                        <label>Bottom</label>
+                        <input type="number" id="mount-bottom" value="0" oninput="liveUpdate()">
+                    </div>
+                    <div class="field">
+                        <label>Left</label>
+                        <input type="number" id="mount-left" value="0" oninput="liveUpdate()">
+                    </div>
+                    <div class="field">
+                        <label>Right</label>
+                        <input type="number" id="mount-right" value="0" oninput="liveUpdate()">
+                    </div>
+                </div>
+
+                <div class="field" style="max-width:180px;">
+                    <label>Moulding Width</label>
+                    <input type="number" id="moulding-width-artwork" oninput="liveUpdate()">
+                    <div class="moulding-unit-note">Always in mm</div>
+                </div>
+                <div class="extras-row">
+                    <div class="field">
+                        <label>Number of Frames</label>
+                        <input type="number" id="num-frames-artwork" value="1" min="1" oninput="liveUpdate()">
+                    </div>
+                    <div class="field">
+                        <label>Length Size (mm)</label>
+                        <input type="number" id="stock-length-artwork" value="3000" min="1" oninput="liveUpdate()">
+                    </div>
+                </div>
             </div>
         </div>
 
-        <div class="main-layout">
-            <!-- LEFT COLUMN: Inputs -->
-            <div class="left-column">
-                <!-- DIRECT ENTRY MODE -->
-                <div id="direct-mode">
-                    <div class="panel">
-                        <h2>Glass Size</h2>
-                        
-                        <div class="input-group">
-                            <div class="input-field">
-                                <label for="glass-width">Width</label>
-                                <input type="number" id="glass-width" min="0" step="0.1" oninput="calculate()">
-                                <div class="unit-label">mm</div>
-                            </div>
-                            <div class="input-field">
-                                <label for="glass-height">Height</label>
-                                <input type="number" id="glass-height" min="0" step="0.1" oninput="calculate()">
-                                <div class="unit-label">mm</div>
-                            </div>
-                        </div>
-
-                        <div class="input-field-full">
-                            <label for="moulding-width">Moulding Width (always mm)</label>
-                            <input type="number" id="moulding-width" min="0" step="0.1" oninput="calculate()">
-                            <div class="unit-label-fixed">mm</div>
-                        </div>
-                    </div>
+        <!-- RIGHT COLUMN: Results + Visuals -->
+        <div class="right-col">
+            <!-- Results Panel -->
+            <div class="panel">
+                <div id="placeholder">
+                    <p>Enter dimensions to see results</p>
                 </div>
-
-                <!-- ARTWORK MODE -->
-                <div id="artwork-mode" style="display: none;">
-                    <div class="panel">
-                        <h2>Artwork Size</h2>
-                        
-                        <div class="input-group">
-                            <div class="input-field">
-                                <label for="artwork-width">Width</label>
-                                <input type="number" id="artwork-width" min="0" step="0.1" oninput="calculate()">
-                                <div class="unit-label">mm</div>
+                <div id="results-container" style="display:none;">
+                    <div class="results">
+                        <div id="glass-size-result" style="display:none;">
+                            <div class="result-item">
+                                <div class="result-label">Calculated Glass Size</div>
+                                <div class="result-dimensions" id="glass-dims"></div>
+                                <div class="result-dimensions-secondary" id="glass-dims-alt"></div>
                             </div>
-                            <div class="input-field">
-                                <label for="artwork-height">Height</label>
-                                <input type="number" id="artwork-height" min="0" step="0.1" oninput="calculate()">
-                                <div class="unit-label">mm</div>
-                            </div>
+                            <div class="result-separator"></div>
                         </div>
-                    </div>
-
-                    <div class="panel">
-                        <h2>Mount Widths</h2>
-
-                        <button class="equal-button" onclick="equalizeMount()">⚡ Equal All Sides</button>
-                        
-                        <div class="mount-grid">
-                            <div class="input-field">
-                                <label for="mount-top">Top</label>
-                                <input type="number" id="mount-top" min="0" step="0.1" oninput="calculate()">
-                                <div class="unit-label">mm</div>
-                            </div>
-                            <div class="input-field">
-                                <label for="mount-bottom">Bottom</label>
-                                <input type="number" id="mount-bottom" min="0" step="0.1" oninput="calculate()">
-                                <div class="unit-label">mm</div>
-                            </div>
-                            <div class="input-field">
-                                <label for="mount-left">Left</label>
-                                <input type="number" id="mount-left" min="0" step="0.1" oninput="calculate()">
-                                <div class="unit-label">mm</div>
-                            </div>
-                            <div class="input-field">
-                                <label for="mount-right">Right</label>
-                                <input type="number" id="mount-right" min="0" step="0.1" oninput="calculate()">
-                                <div class="unit-label">mm</div>
-                            </div>
+                        <div class="result-item">
+                            <div class="result-label">Total Moulding Needed</div>
+                            <div class="result-value" id="total-length"></div>
+                            <div class="result-value-secondary" id="total-length-alt"></div>
                         </div>
-
-                        <div class="input-field-full">
-                            <label for="moulding-width-artwork">Moulding Width (always mm)</label>
-                            <input type="number" id="moulding-width-artwork" min="0" step="0.1" oninput="calculate()">
-                            <div class="unit-label-fixed">mm</div>
+                        <div class="result-separator"></div>
+                        <div class="result-grid">
+                            <div class="result-item">
+                                <div class="result-label">Long Side</div>
+                                <div class="result-value" id="long-side-val"></div>
+                            </div>
+                            <div class="result-item">
+                                <div class="result-label">Short Side</div>
+                                <div class="result-value" id="short-side-val"></div>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- RIGHT COLUMN: Results -->
-            <div class="panel">
-                <h2>Result</h2>
-                
-                <div id="results-container" style="display: none;">
-                    <div class="results">
-                        <div id="glass-size-result" style="display: none;">
-                            <div class="result-item">
-                                <div class="result-label">Calculated Glass Size</div>
-                                <div class="result-dimensions" id="glass-size-dimensions">0 × 0 mm</div>
-                                <div class="result-dimensions-secondary" id="glass-size-dimensions-secondary"></div>
-                            </div>
-                            <div class="result-separator"></div>
-                        </div>
-                        
-                        <div class="result-item">
-                            <div class="result-label">Total Moulding Length</div>
-                            <div class="result-value" id="total-length">0 mm</div>
-                            <div class="result-value-secondary" id="total-length-secondary"></div>
-                        </div>
-                    </div>
+            <!-- Cut Diagram Panel -->
+            <div id="cut-panel" class="panel" style="display:none;">
+                <div class="panel-title">Cutting Layout</div>
+                <div id="bars-container"></div>
+
+                <div class="bar-legend">
+                    <div class="legend-item"><div class="legend-swatch" style="background:var(--col-long)"></div>Long Side</div>
+                    <div class="legend-item"><div class="legend-swatch" style="background:var(--col-short)"></div>Short Side</div>
+                    <div class="legend-item"><div class="legend-swatch" style="background:var(--col-waste)"></div>Offcut</div>
                 </div>
 
-                <div id="placeholder">
-                    <p style="font-size: 0.9rem;">Enter measurements to see results</p>
-                </div>
+                <div class="cutting-summary" id="cutting-summary"></div>
             </div>
         </div>
     </div>
 
     <script>
-        let currentUnit = 'mm';
         let currentMode = 'direct';
-        const INCH_TO_MM = 25.4;
-
-        function setUnit(unit) {
-            currentUnit = unit;
-            document.getElementById('btn-mm').classList.toggle('active', unit === 'mm');
-            document.getElementById('btn-inch').classList.toggle('active', unit === 'inch');
-            
-            const unitLabel = unit === 'mm' ? 'mm' : 'inches';
-            document.querySelectorAll('.unit-label').forEach(el => el.textContent = unitLabel);
-            
-            calculate();
-        }
+        let currentUnit = 'mm';
 
         function setMode(mode) {
             currentMode = mode;
             document.getElementById('btn-direct').classList.toggle('active', mode === 'direct');
             document.getElementById('btn-artwork').classList.toggle('active', mode === 'artwork');
-            
-            document.getElementById('direct-mode').style.display = mode === 'direct' ? 'block' : 'none';
-            document.getElementById('artwork-mode').style.display = mode === 'artwork' ? 'block' : 'none';
-            
-            calculate();
+            document.getElementById('direct-panel').style.display = mode === 'direct' ? 'block' : 'none';
+            document.getElementById('artwork-panel').style.display = mode === 'artwork' ? 'block' : 'none';
+            liveUpdate();
         }
 
-        function equalizeMount() {
-            const topValue = document.getElementById('mount-top').value;
-            if (topValue) {
-                document.getElementById('mount-bottom').value = topValue;
-                document.getElementById('mount-left').value = topValue;
-                document.getElementById('mount-right').value = topValue;
-                calculate();
+        function setUnit(unit) {
+            currentUnit = unit;
+            document.getElementById('btn-mm').classList.toggle('active', unit === 'mm');
+            document.getElementById('btn-inches').classList.toggle('active', unit === 'inches');
+            liveUpdate();
+        }
+
+        function equalAllSides() {
+            const topVal = document.getElementById('mount-top').value;
+            if (topVal) {
+                document.getElementById('mount-bottom').value = topVal;
+                document.getElementById('mount-left').value = topVal;
+                document.getElementById('mount-right').value = topVal;
+                liveUpdate();
             }
         }
 
-        function showResults(show) {
-            document.getElementById('results-container').style.display = show ? 'block' : 'none';
-            document.getElementById('placeholder').style.display = show ? 'none' : 'block';
+        function toMM(val) { return currentUnit === 'inches' ? val * 25.4 : val; }
+        function fromMM(val) { return currentUnit === 'inches' ? val / 25.4 : val; }
+
+        function formatVal(valMM) {
+            const v = fromMM(valMM);
+            return currentUnit === 'mm' ? Math.round(v).toString() : v.toFixed(2);
         }
 
-        function formatLength(valueMM) {
-            // Always show mm as primary when in mm mode
-            // Show both when in inches mode (inches primary, mm secondary)
-            if (currentUnit === 'mm') {
-                return {
-                    primary: `${Math.round(valueMM)} mm`,
-                    secondary: null
-                };
-            } else {
-                const inches = valueMM / INCH_TO_MM;
-                return {
-                    primary: `${inches.toFixed(2)} inches`,
-                    secondary: `(${Math.round(valueMM)} mm)`
-                };
-            }
+        function formatValAlt(valMM) {
+            if (currentUnit === 'mm') return (valMM / 25.4).toFixed(2) + ' inches';
+            return Math.round(valMM) + ' mm';
         }
 
-        function formatDimensions(widthMM, heightMM) {
-            if (currentUnit === 'mm') {
-                return {
-                    primary: `${Math.round(widthMM)} × ${Math.round(heightMM)} mm`,
-                    secondary: null
-                };
-            } else {
-                const widthInch = widthMM / INCH_TO_MM;
-                const heightInch = heightMM / INCH_TO_MM;
-                return {
-                    primary: `${widthInch.toFixed(2)} × ${heightInch.toFixed(2)} inches`,
-                    secondary: `(${Math.round(widthMM)} × ${Math.round(heightMM)} mm)`
-                };
-            }
-        }
+        function unitLabel() { return currentUnit === 'mm' ? 'mm' : 'inches'; }
 
-        function calculate() {
+        function liveUpdate() {
+            let glassW_mm, glassH_mm, mouldW_mm, numFrames, stockLen;
+
             if (currentMode === 'direct') {
-                let width = parseFloat(document.getElementById('glass-width').value);
-                let height = parseFloat(document.getElementById('glass-height').value);
-                let mouldingWidthMM = parseFloat(document.getElementById('moulding-width').value); // Always mm
+                const w = parseFloat(document.getElementById('glass-width').value);
+                const h = parseFloat(document.getElementById('glass-height').value);
+                const m = parseFloat(document.getElementById('moulding-width-direct').value);
+                numFrames = parseInt(document.getElementById('num-frames-direct').value) || 1;
+                stockLen = parseFloat(document.getElementById('stock-length-direct').value) || 3000;
 
-                if (!width || !height || !mouldingWidthMM || width <= 0 || height <= 0 || mouldingWidthMM <= 0) {
-                    showResults(false);
-                    return;
-                }
-
-                // Convert dimensions to mm if in inches (but NOT moulding width)
-                let widthMM = currentUnit === 'inch' ? width * INCH_TO_MM : width;
-                let heightMM = currentUnit === 'inch' ? height * INCH_TO_MM : height;
-
-                const totalLengthMM = (heightMM + widthMM) * 2 + (mouldingWidthMM * 8);
-                const formatted = formatLength(totalLengthMM);
-
+                if (isNaN(w) || isNaN(h) || isNaN(m) || w <= 0 || h <= 0 || m <= 0) { hideResults(); return; }
+                glassW_mm = toMM(w);
+                glassH_mm = toMM(h);
+                mouldW_mm = m;
                 document.getElementById('glass-size-result').style.display = 'none';
-                document.getElementById('total-length').textContent = formatted.primary;
-                document.getElementById('total-length-secondary').textContent = formatted.secondary || '';
-                showResults(true);
-                
             } else {
-                let artworkWidth = parseFloat(document.getElementById('artwork-width').value);
-                let artworkHeight = parseFloat(document.getElementById('artwork-height').value);
-                let mountTop = parseFloat(document.getElementById('mount-top').value);
-                let mountBottom = parseFloat(document.getElementById('mount-bottom').value);
-                let mountLeft = parseFloat(document.getElementById('mount-left').value);
-                let mountRight = parseFloat(document.getElementById('mount-right').value);
-                let mouldingWidthMM = parseFloat(document.getElementById('moulding-width-artwork').value); // Always mm
+                const aw = parseFloat(document.getElementById('artwork-width').value);
+                const ah = parseFloat(document.getElementById('artwork-height').value);
+                const mt = parseFloat(document.getElementById('mount-top').value) || 0;
+                const mb = parseFloat(document.getElementById('mount-bottom').value) || 0;
+                const ml = parseFloat(document.getElementById('mount-left').value) || 0;
+                const mr = parseFloat(document.getElementById('mount-right').value) || 0;
+                const m = parseFloat(document.getElementById('moulding-width-artwork').value);
+                numFrames = parseInt(document.getElementById('num-frames-artwork').value) || 1;
+                stockLen = parseFloat(document.getElementById('stock-length-artwork').value) || 3000;
 
-                if (!artworkWidth || !artworkHeight || !mouldingWidthMM || 
-                    artworkWidth <= 0 || artworkHeight <= 0 || mouldingWidthMM <= 0 ||
-                    isNaN(mountTop) || isNaN(mountBottom) || isNaN(mountLeft) || isNaN(mountRight) ||
-                    mountTop < 0 || mountBottom < 0 || mountLeft < 0 || mountRight < 0) {
-                    showResults(false);
+                if (isNaN(aw) || isNaN(ah) || isNaN(m) ||
+                    aw <= 0 || ah <= 0 || m <= 0) { hideResults(); return; }
+
+                glassW_mm = toMM(aw) + toMM(ml) + toMM(mr);
+                glassH_mm = toMM(ah) + toMM(mt) + toMM(mb);
+                mouldW_mm = m;
+
+                document.getElementById('glass-size-result').style.display = 'block';
+                document.getElementById('glass-dims').textContent = formatVal(glassW_mm) + ' \u00d7 ' + formatVal(glassH_mm) + ' ' + unitLabel();
+                document.getElementById('glass-dims-alt').textContent = formatValAlt(glassW_mm) + ' \u00d7 ' + formatValAlt(glassH_mm);
+            }
+
+            if (numFrames < 1) numFrames = 1;
+
+            // Piece lengths including mitre (one moulding width per end)
+            const wastePerEnd = mouldW_mm;
+            const longRaw = Math.max(glassW_mm, glassH_mm);
+            const shortRaw = Math.min(glassW_mm, glassH_mm);
+            const longPiece = longRaw + 2 * wastePerEnd;
+            const shortPiece = shortRaw + 2 * wastePerEnd;
+
+            const totalPerFrame = 2 * longPiece + 2 * shortPiece;
+            const totalAll = totalPerFrame * numFrames;
+
+            const u = unitLabel();
+            document.getElementById('total-length').textContent = formatVal(totalAll) + ' ' + u;
+            document.getElementById('total-length-alt').textContent = formatValAlt(totalAll) +
+                (numFrames > 1 ? '  (' + formatVal(totalPerFrame) + ' ' + u + ' per frame)' : '');
+            document.getElementById('long-side-val').textContent = formatVal(longPiece) + ' ' + u;
+            document.getElementById('short-side-val').textContent = formatVal(shortPiece) + ' ' + u;
+
+            document.getElementById('results-container').style.display = 'block';
+            document.getElementById('placeholder').style.display = 'none';
+
+            // Build all pieces
+            const allPieces = [];
+            for (let f = 0; f < numFrames; f++) {
+                allPieces.push({ len: longPiece, type: 'long', frame: f + 1 });
+                allPieces.push({ len: longPiece, type: 'long', frame: f + 1 });
+                allPieces.push({ len: shortPiece, type: 'short', frame: f + 1 });
+                allPieces.push({ len: shortPiece, type: 'short', frame: f + 1 });
+            }
+
+            const bars = optimiseCuts(allPieces, stockLen);
+            renderBars(bars, stockLen);
+
+            document.getElementById('cut-panel').style.display = 'block';
+        }
+
+        function optimiseCuts(pieces, stockLen) {
+            const sorted = [...pieces].sort((a, b) => b.len - a.len);
+            const bars = [];
+
+            sorted.forEach(piece => {
+                if (piece.len > stockLen) {
+                    bars.push({ pieces: [piece], remaining: stockLen - piece.len });
                     return;
                 }
 
-                // Convert to mm if in inches (but NOT moulding width)
-                if (currentUnit === 'inch') {
-                    artworkWidth *= INCH_TO_MM;
-                    artworkHeight *= INCH_TO_MM;
-                    mountTop *= INCH_TO_MM;
-                    mountBottom *= INCH_TO_MM;
-                    mountLeft *= INCH_TO_MM;
-                    mountRight *= INCH_TO_MM;
+                let bestIdx = -1;
+                let bestRemaining = Infinity;
+                for (let i = 0; i < bars.length; i++) {
+                    if (bars[i].remaining >= piece.len && bars[i].remaining < bestRemaining) {
+                        bestIdx = i;
+                        bestRemaining = bars[i].remaining;
+                    }
                 }
 
-                const glassWidthMM = artworkWidth + mountLeft + mountRight;
-                const glassHeightMM = artworkHeight + mountTop + mountBottom;
-                const totalLengthMM = (glassHeightMM + glassWidthMM) * 2 + (mouldingWidthMM * 8);
+                if (bestIdx >= 0) {
+                    bars[bestIdx].pieces.push(piece);
+                    bars[bestIdx].remaining -= piece.len;
+                } else {
+                    bars.push({ pieces: [piece], remaining: stockLen - piece.len });
+                }
+            });
 
-                const formattedDims = formatDimensions(glassWidthMM, glassHeightMM);
-                const formattedLength = formatLength(totalLengthMM);
-
-                document.getElementById('glass-size-dimensions').textContent = formattedDims.primary;
-                document.getElementById('glass-size-dimensions-secondary').textContent = formattedDims.secondary || '';
-                document.getElementById('glass-size-result').style.display = 'block';
-                document.getElementById('total-length').textContent = formattedLength.primary;
-                document.getElementById('total-length-secondary').textContent = formattedLength.secondary || '';
-                showResults(true);
-            }
+            return bars;
         }
+
+        function renderBars(bars, stockLen) {
+            const container = document.getElementById('bars-container');
+            const u = unitLabel();
+            let html = '';
+
+            bars.forEach((bar, i) => {
+                const usedLen = stockLen - bar.remaining;
+                const offcut = Math.max(0, bar.remaining);
+
+                html += '<div class="bar-label-row">' +
+                    '<span class="bar-label-text">Length ' + (i + 1) + '</span>' +
+                    '<span class="bar-label-text" style="font-weight:400">' + formatVal(usedLen) + ' ' + u + ' used</span>' +
+                    '</div>';
+
+                html += '<div class="bar-track">';
+
+                bar.pieces.forEach((p, pi) => {
+                    const pct = Math.max((p.len / stockLen) * 100, 0.5);
+                    const cls = p.type === 'long' ? 'long-side' : 'short-side';
+                    const label = (p.type === 'long' ? 'L ' : 'S ') + formatVal(p.len);
+                    // Add cut mark on every piece except the last if no offcut follows
+                    const showCut = (pi < bar.pieces.length - 1) || (offcut > 0);
+                    html += '<div class="bar-piece ' + cls + '" style="width:' + pct + '%">' +
+                        '<span class="piece-label">' + label + '</span>' +
+                        (showCut ? '<div class="cut-mark"></div>' : '') +
+                        '</div>';
+                });
+
+                if (offcut > 0) {
+                    const pct = (offcut / stockLen) * 100;
+                    html += '<div class="bar-piece offcut" style="width:' + pct + '%">' +
+                        '<span class="piece-label">' + formatVal(offcut) + '</span></div>';
+                }
+
+                html += '</div><div class="bar-gap"></div>';
+            });
+
+            container.innerHTML = html;
+
+            const totalPieces = bars.reduce((sum, b) => sum + b.pieces.length, 0);
+
+            document.getElementById('cutting-summary').innerHTML =
+                '<div class="summary-row">' +
+                    '<span class="summary-label">Lengths required</span>' +
+                    '<span class="summary-value">' + bars.length + ' \u00d7 ' + Math.round(stockLen) + ' mm</span>' +
+                '</div>' +
+                '<div class="summary-row">' +
+                    '<span class="summary-label">Total pieces</span>' +
+                    '<span class="summary-value">' + totalPieces + '</span>' +
+                '</div>';
+        }
+
+        function hideResults() {
+            document.getElementById('results-container').style.display = 'none';
+            document.getElementById('placeholder').style.display = 'block';
+            document.getElementById('cut-panel').style.display = 'none';
+        }
+
+        hideResults();
     </script>
 </body>
 </html>
