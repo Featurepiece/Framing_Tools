@@ -656,24 +656,69 @@
         }
 
         function optimiseCuts(pieces, stockLen) {
+            // Try multiple packing strategies and pick the one using fewest lengths
+            // (ties broken by least total waste)
+
+            const strategies = [];
+
+            // Strategy 1: Best-Fit Decreasing (original)
+            strategies.push(packBFD([...pieces], stockLen));
+
+            // Strategy 2: First-Fit Decreasing
+            strategies.push(packFFD([...pieces], stockLen));
+
+            // Strategy 3: Alternate long/short packing
+            // Sort so we interleave: long, short, long, short...
+            const longs = pieces.filter(p => p.type === 'long');
+            const shorts = pieces.filter(p => p.type === 'short');
+            const interleaved = [];
+            const maxLen = Math.max(longs.length, shorts.length);
+            for (let i = 0; i < maxLen; i++) {
+                if (i < longs.length) interleaved.push(longs[i]);
+                if (i < shorts.length) interleaved.push(shorts[i]);
+            }
+            strategies.push(packFFD(interleaved, stockLen));
+
+            // Strategy 4: Short-first then fill with longs
+            const shortFirst = [...shorts, ...longs];
+            strategies.push(packBFD(shortFirst, stockLen));
+
+            // Strategy 5: Try pairing 1 long + as many shorts as fit
+            strategies.push(packLongPlusShorts(longs, shorts, stockLen));
+
+            // Pick the best: fewest lengths, then least waste
+            let best = strategies[0];
+            for (let i = 1; i < strategies.length; i++) {
+                const s = strategies[i];
+                if (s.length < best.length ||
+                    (s.length === best.length && totalRemaining(s) < totalRemaining(best))) {
+                    best = s;
+                }
+            }
+
+            return best;
+        }
+
+        function totalRemaining(bars) {
+            return bars.reduce((sum, b) => sum + Math.max(0, b.remaining), 0);
+        }
+
+        function packBFD(pieces, stockLen) {
             const sorted = [...pieces].sort((a, b) => b.len - a.len);
             const bars = [];
-
             sorted.forEach(piece => {
                 if (piece.len > stockLen) {
                     bars.push({ pieces: [piece], remaining: stockLen - piece.len });
                     return;
                 }
-
                 let bestIdx = -1;
-                let bestRemaining = Infinity;
+                let bestRem = Infinity;
                 for (let i = 0; i < bars.length; i++) {
-                    if (bars[i].remaining >= piece.len && bars[i].remaining < bestRemaining) {
+                    if (bars[i].remaining >= piece.len && bars[i].remaining < bestRem) {
                         bestIdx = i;
-                        bestRemaining = bars[i].remaining;
+                        bestRem = bars[i].remaining;
                     }
                 }
-
                 if (bestIdx >= 0) {
                     bars[bestIdx].pieces.push(piece);
                     bars[bestIdx].remaining -= piece.len;
@@ -681,6 +726,75 @@
                     bars.push({ pieces: [piece], remaining: stockLen - piece.len });
                 }
             });
+            return bars;
+        }
+
+        function packFFD(pieces, stockLen) {
+            const bars = [];
+            pieces.forEach(piece => {
+                if (piece.len > stockLen) {
+                    bars.push({ pieces: [piece], remaining: stockLen - piece.len });
+                    return;
+                }
+                let placed = false;
+                for (let i = 0; i < bars.length; i++) {
+                    if (bars[i].remaining >= piece.len) {
+                        bars[i].pieces.push(piece);
+                        bars[i].remaining -= piece.len;
+                        placed = true;
+                        break;
+                    }
+                }
+                if (!placed) {
+                    bars.push({ pieces: [piece], remaining: stockLen - piece.len });
+                }
+            });
+            return bars;
+        }
+
+        function packLongPlusShorts(longs, shorts, stockLen) {
+            // For each length, try to fit 1 long + as many shorts as possible
+            const bars = [];
+            const usedShorts = new Array(shorts.length).fill(false);
+            const usedLongs = new Array(longs.length).fill(false);
+
+            // Place each long, then fill remaining space with shorts
+            for (let li = 0; li < longs.length; li++) {
+                if (longs[li].len > stockLen) {
+                    bars.push({ pieces: [longs[li]], remaining: stockLen - longs[li].len });
+                    usedLongs[li] = true;
+                    continue;
+                }
+                const bar = { pieces: [longs[li]], remaining: stockLen - longs[li].len };
+                usedLongs[li] = true;
+
+                // Fill with shorts (largest first that fits)
+                for (let si = 0; si < shorts.length; si++) {
+                    if (!usedShorts[si] && bar.remaining >= shorts[si].len) {
+                        bar.pieces.push(shorts[si]);
+                        bar.remaining -= shorts[si].len;
+                        usedShorts[si] = true;
+                    }
+                }
+                bars.push(bar);
+            }
+
+            // Any remaining shorts
+            for (let si = 0; si < shorts.length; si++) {
+                if (usedShorts[si]) continue;
+                let placed = false;
+                for (let i = 0; i < bars.length; i++) {
+                    if (bars[i].remaining >= shorts[si].len) {
+                        bars[i].pieces.push(shorts[si]);
+                        bars[i].remaining -= shorts[si].len;
+                        placed = true;
+                        break;
+                    }
+                }
+                if (!placed) {
+                    bars.push({ pieces: [shorts[si]], remaining: stockLen - shorts[si].len });
+                }
+            }
 
             return bars;
         }
