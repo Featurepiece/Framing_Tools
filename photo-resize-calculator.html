@@ -1202,31 +1202,62 @@
             const canvas = document.getElementById('proportional-preview');
             const ctx = canvas.getContext('2d');
             const padding = 15;
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            const maxW = 280, maxH = 300;
             
             let previewOrigW = v.origWidth, previewOrigH = v.origHeight;
             if (uploadedImage && (previewOrigW <= 0 || previewOrigH <= 0)) { previewOrigW = imagePixelWidth; previewOrigH = imagePixelHeight; }
-            if (previewOrigW <= 0 || previewOrigH <= 0) { ctx.font = '11px DM Sans'; ctx.fillStyle = '#999'; ctx.textAlign = 'center'; ctx.fillText('Enter dimensions', canvas.width / 2, canvas.height / 2); return; }
+            if (previewOrigW <= 0 || previewOrigH <= 0) { 
+                canvas.width = maxW; canvas.height = 180;
+                ctx.font = '11px DM Sans'; ctx.fillStyle = '#999'; ctx.textAlign = 'center'; ctx.fillText('Enter dimensions', canvas.width / 2, canvas.height / 2); return; 
+            }
             
+            // Resize canvas to match image aspect ratio
+            const imgRatio = previewOrigW / previewOrigH;
+            if (imgRatio >= 1) {
+                canvas.width = maxW;
+                canvas.height = Math.min(maxH, Math.round((maxW - padding * 2) / imgRatio + padding * 2));
+            } else {
+                canvas.height = maxH;
+                canvas.width = Math.min(maxW, Math.round((maxH - padding * 2) * imgRatio + padding * 2));
+            }
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
             let previewNewW = newWidth, previewNewH = newHeight;
             if (previewNewW <= 0 && previewNewH <= 0) { previewNewW = previewOrigW; previewNewH = previewOrigH; }
 
+            const isEnlarging = previewNewW >= previewOrigW && previewNewH >= previewOrigH;
+
             const scaleToFit = Math.min((canvas.width - padding * 2) / previewOrigW, (canvas.height - padding * 2) / previewOrigH);
             const origDrawW = previewOrigW * scaleToFit, origDrawH = previewOrigH * scaleToFit;
-            const newDrawW = previewNewW * scaleToFit, newDrawH = previewNewH * scaleToFit;
             const origX = (canvas.width - origDrawW) / 2, origY = (canvas.height - origDrawH) / 2;
 
-            if (uploadedImage) {
-                ctx.globalAlpha = 0.3;
-                ctx.drawImage(uploadedImage, origX, origY, origDrawW, origDrawH);
-                ctx.globalAlpha = 1;
-                ctx.drawImage(uploadedImage, origX, origY, newDrawW, newDrawH);
-                ctx.strokeStyle = '#c9a87c'; ctx.lineWidth = 2;
-                ctx.strokeRect(origX, origY, newDrawW, newDrawH);
+            if (isEnlarging) {
+                // Enlargement: just show the full image at original canvas size
+                if (uploadedImage) {
+                    ctx.drawImage(uploadedImage, origX, origY, origDrawW, origDrawH);
+                    ctx.strokeStyle = '#c9a87c'; ctx.lineWidth = 2;
+                    ctx.strokeRect(origX, origY, origDrawW, origDrawH);
+                } else {
+                    ctx.fillStyle = 'rgba(201, 168, 124, 0.3)'; ctx.fillRect(origX, origY, origDrawW, origDrawH);
+                    ctx.strokeStyle = '#c9a87c'; ctx.lineWidth = 2; ctx.strokeRect(origX, origY, origDrawW, origDrawH);
+                }
             } else {
-                ctx.strokeStyle = '#94a3b8'; ctx.setLineDash([5, 5]); ctx.strokeRect(origX, origY, origDrawW, origDrawH); ctx.setLineDash([]);
-                ctx.fillStyle = 'rgba(201, 168, 124, 0.3)'; ctx.fillRect(origX, origY, newDrawW, newDrawH);
-                ctx.strokeStyle = '#c9a87c'; ctx.lineWidth = 2; ctx.strokeRect(origX, origY, newDrawW, newDrawH);
+                // Reduction: show the new size relative to the original
+                const newDrawW = previewNewW * scaleToFit, newDrawH = previewNewH * scaleToFit;
+
+                if (uploadedImage) {
+                    ctx.globalAlpha = 0.3;
+                    ctx.drawImage(uploadedImage, origX, origY, origDrawW, origDrawH);
+                    ctx.globalAlpha = 1;
+                    ctx.drawImage(uploadedImage, origX, origY, newDrawW, newDrawH);
+                    ctx.strokeStyle = '#c9a87c'; ctx.lineWidth = 2;
+                    ctx.strokeRect(origX, origY, newDrawW, newDrawH);
+                } else {
+                    ctx.strokeStyle = '#94a3b8'; ctx.setLineDash([5, 5]); ctx.strokeRect(origX, origY, origDrawW, origDrawH); ctx.setLineDash([]);
+                    ctx.fillStyle = 'rgba(201, 168, 124, 0.3)'; ctx.fillRect(origX, origY, newDrawW, newDrawH);
+                    ctx.strokeStyle = '#c9a87c'; ctx.lineWidth = 2; ctx.strokeRect(origX, origY, newDrawW, newDrawH);
+                }
             }
         }
 
