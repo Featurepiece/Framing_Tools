@@ -221,9 +221,9 @@
         }
 
         .image-thumbnail {
-            width: 60px;
-            height: 60px;
-            object-fit: cover;
+            max-width: 80px;
+            max-height: 100px;
+            object-fit: contain;
             border-radius: 6px;
             flex-shrink: 0;
         }
@@ -271,6 +271,38 @@
 
         .dpi-presets button:hover { background: var(--bg-primary); }
         .dpi-presets button.active { background: var(--accent); color: var(--text-light); border-color: var(--accent); }
+
+        .multiplier-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+
+        .multiplier-label {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        .multiplier-presets {
+            display: flex;
+            gap: 4px;
+        }
+
+        .multiplier-presets button {
+            padding: 5px 12px;
+            border: 1px solid var(--border);
+            background: var(--bg-secondary);
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            cursor: pointer;
+            font-family: 'DM Sans', sans-serif;
+            transition: all 0.2s;
+        }
+
+        .multiplier-presets button:hover { background: var(--bg-primary); }
 
         .aspect-ratio-display {
             background: rgba(201, 168, 124, 0.15);
@@ -584,6 +616,16 @@
                             <label for="new-height">New Height</label>
                             <input type="number" id="new-height" min="0" step="any" oninput="calculateFromHeight()">
                             <div class="unit-label">mm</div>
+                        </div>
+                    </div>
+
+                    <div class="multiplier-row">
+                        <span class="multiplier-label">Scale:</span>
+                        <div class="multiplier-presets">
+                            <button onclick="applyMultiplier(0.5)">½×</button>
+                            <button onclick="applyMultiplier(2)">2×</button>
+                            <button onclick="applyMultiplier(3)">3×</button>
+                            <button onclick="applyMultiplier(4)">4×</button>
                         </div>
                     </div>
                     
@@ -944,6 +986,14 @@
                 const ratio = v.origWidth / v.origHeight;
                 document.getElementById('new-width').value = formatNumber(v.newHeight * ratio);
             }
+            calculate();
+        }
+
+        function applyMultiplier(multiplier) {
+            const v = getValues();
+            if (v.origWidth <= 0 || v.origHeight <= 0) return;
+            document.getElementById('new-width').value = formatNumber(v.origWidth * multiplier);
+            document.getElementById('new-height').value = formatNumber(v.origHeight * multiplier);
             calculate();
         }
 
