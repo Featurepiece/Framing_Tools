@@ -19,6 +19,7 @@
             --shadow: rgba(44, 62, 80, 0.08);
             --shadow-hover: rgba(44, 62, 80, 0.15);
             --danger: #c0392b;
+            --success: #27ae60;
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -31,130 +32,115 @@
             line-height: 1.6;
         }
 
-        .container { max-width: 900px; margin: 0 auto; padding: 30px 24px; }
-
-        .header-top { display: flex; justify-content: flex-end; margin-bottom: 10px; }
-
-        header { text-align: center; margin-bottom: 30px; }
-
-        .btn {
-            font-family: 'DM Sans', sans-serif;
-            font-size: 0.875rem;
-            font-weight: 500;
-            padding: 10px 20px;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            transition: all 0.2s ease;
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 40px 24px;
         }
 
-        .btn-settings { background: var(--bg-accent); color: var(--text-light); }
-        .btn-settings:hover { background: #3d5166; }
-        .btn-primary { background: var(--accent); color: var(--text-light); }
-        .btn-primary:hover { background: var(--accent-hover); }
-        .btn-secondary { background: var(--bg-secondary); color: var(--text-primary); border: 1px solid var(--border); }
-        .btn-secondary:hover { background: var(--border); }
-        .btn-small { padding: 6px 12px; font-size: 0.8rem; }
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
 
         .logo {
-            width: 80px; height: 80px;
-            background: var(--bg-accent);
-            border-radius: 20px;
-            display: flex; align-items: center; justify-content: center;
-            margin: 0 auto 24px;
-            font-size: 2.5rem;
-            box-shadow: 0 4px 20px var(--shadow);
-        }
-
-        h1 {
             font-family: 'Playfair Display', serif;
-            font-size: 2.75rem;
+            font-size: 2rem;
             font-weight: 500;
-            margin-bottom: 12px;
+            color: var(--text-primary);
+            margin-bottom: 4px;
         }
 
-        .subtitle { color: var(--text-secondary); font-size: 1.1rem; }
+        .tagline {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+        }
 
         .tools-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 24px;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
             margin-bottom: 30px;
+        }
+
+        @media (max-width: 700px) {
+            .tools-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 450px) {
+            .tools-grid {
+                grid-template-columns: 1fr;
+            }
         }
 
         .tool-card {
             background: var(--bg-secondary);
-            border-radius: 16px;
-            padding: 32px;
-            box-shadow: 0 2px 16px var(--shadow);
-            transition: all 0.3s ease;
-            cursor: pointer;
+            border-radius: 12px;
+            padding: 20px;
             text-decoration: none;
-            color: inherit;
+            color: var(--text-primary);
+            box-shadow: 0 2px 12px var(--shadow);
+            transition: all 0.2s;
             display: flex;
             flex-direction: column;
-            position: relative;
-            overflow: hidden;
+            align-items: center;
+            text-align: center;
+            cursor: pointer;
         }
 
-        .tool-card::before {
-            content: '';
-            position: absolute;
-            top: 0; left: 0; right: 0;
-            height: 4px;
-            background: var(--accent);
-            transform: scaleX(0);
-            transition: transform 0.3s ease;
+        .tool-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px var(--shadow-hover);
         }
-
-        .tool-card:hover { transform: translateY(-4px); box-shadow: 0 8px 32px var(--shadow-hover); }
-        .tool-card:hover::before { transform: scaleX(1); }
 
         .tool-icon {
-            width: 56px; height: 56px;
-            background: var(--bg-primary);
-            border-radius: 12px;
-            display: flex; align-items: center; justify-content: center;
-            font-size: 1.75rem;
-            margin-bottom: 20px;
-            transition: all 0.3s ease;
+            font-size: 2rem;
+            margin-bottom: 10px;
         }
-
-        .tool-card:hover .tool-icon { background: var(--accent); transform: scale(1.05); }
 
         .tool-name {
             font-family: 'Playfair Display', serif;
-            font-size: 1.35rem;
+            font-size: 1rem;
             font-weight: 500;
-            margin-bottom: 8px;
+            margin-bottom: 6px;
         }
 
-        .tool-description { color: var(--text-secondary); font-size: 0.95rem; flex: 1; }
+        .tool-description {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            line-height: 1.4;
+        }
 
-        .tool-arrow {
-            margin-top: 20px;
+        /* Settings */
+        .settings-btn {
+            display: block;
+            margin: 0 auto;
+            padding: 8px 16px;
+            background: none;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text-secondary);
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .settings-btn:hover {
+            border-color: var(--accent);
             color: var(--accent);
-            font-size: 1.25rem;
-            transition: transform 0.3s ease;
-            align-self: flex-end;
         }
-
-        .tool-card:hover .tool-arrow { transform: translateX(6px); }
-
-        .empty-state { text-align: center; padding: 60px 20px; color: var(--text-secondary); grid-column: 1 / -1; }
-        .empty-state-icon { font-size: 3rem; margin-bottom: 16px; opacity: 0.5; }
-
-        footer { text-align: center; padding-top: 20px; border-top: 1px solid var(--border); }
-        .footer-text { color: var(--text-secondary); font-size: 0.9rem; }
-        .version { display: inline-block; background: var(--bg-primary); padding: 4px 12px; border-radius: 20px; font-size: 0.8rem; color: var(--text-secondary); margin-top: 12px; }
 
         .modal-overlay {
+            display: none;
             position: fixed;
             top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(0,0,0,0.5);
-            display: none;
-            align-items: center; justify-content: center;
+            background: rgba(0,0,0,0.4);
             z-index: 1000;
+            justify-content: center;
+            align-items: center;
         }
 
         .modal-overlay.active { display: flex; }
@@ -163,395 +149,395 @@
             background: var(--bg-secondary);
             border-radius: 12px;
             padding: 24px;
-            width: 90%;
             max-width: 500px;
-            max-height: 90vh;
+            width: 90%;
+            max-height: 80vh;
             overflow-y: auto;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.15);
         }
 
-        .modal h3 { font-family: 'Playfair Display', serif; margin-bottom: 20px; }
+        .modal h2 {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.2rem;
+            font-weight: 500;
+            margin-bottom: 16px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid var(--border);
+        }
 
-        .form-group { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
-        .form-group label { font-size: 0.875rem; color: var(--text-secondary); font-weight: 500; }
-        .form-group input, .form-group textarea {
+        .pin-input-group {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        .pin-input-group input {
+            flex: 1;
             padding: 10px 12px;
             border: 1px solid var(--border);
             border-radius: 6px;
             font-family: 'DM Sans', sans-serif;
-            font-size: 0.9rem;
-        }
-        .form-group input:focus, .form-group textarea:focus { outline: none; border-color: var(--accent); }
-        .form-group textarea { resize: vertical; min-height: 80px; }
-
-        .modal-actions { display: flex; gap: 8px; margin-top: 8px; }
-        .modal-actions .btn { flex: 1; }
-
-        .pin-input { display: flex; gap: 8px; justify-content: center; margin: 20px 0; }
-        .pin-input input {
-            width: 45px; height: 50px;
+            font-size: 1rem;
             text-align: center;
-            font-size: 1.25rem;
-            font-weight: 600;
-            border: 2px solid var(--border);
-            border-radius: 8px;
-            font-family: 'DM Sans', sans-serif;
+            letter-spacing: 4px;
         }
-        .pin-input input:focus { outline: none; border-color: var(--accent); }
 
-        .pin-error { color: var(--danger); text-align: center; font-size: 0.875rem; margin-top: 8px; display: none; }
-        .pin-error.show { display: block; }
+        .pin-input-group input:focus { outline: none; border-color: var(--accent); }
 
-        .settings-section { margin-bottom: 24px; }
-        .settings-section h4 { font-family: 'Playfair Display', serif; font-size: 1rem; margin-bottom: 12px; }
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.85rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
 
-        .tools-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+        .btn-primary {
+            background: var(--accent);
+            color: var(--text-light);
+        }
 
-        .tool-item {
+        .btn-primary:hover { background: var(--accent-hover); }
+
+        .btn-secondary {
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+        }
+
+        .btn-secondary:hover { background: var(--border); }
+
+        .btn-danger {
+            background: rgba(192, 57, 43, 0.1);
+            color: var(--danger);
+        }
+
+        .btn-danger:hover { background: rgba(192, 57, 43, 0.2); }
+
+        .btn-row {
+            display: flex;
+            gap: 8px;
+            justify-content: flex-end;
+            margin-top: 16px;
+        }
+
+        .settings-tool-list {
+            list-style: none;
+            margin-bottom: 16px;
+        }
+
+        .settings-tool-item {
             display: flex;
             align-items: center;
-            gap: 12px;
-            padding: 12px;
+            gap: 8px;
+            padding: 10px;
+            border-bottom: 1px solid var(--border);
+            font-size: 0.9rem;
+        }
+
+        .settings-tool-item:last-child { border-bottom: none; }
+
+        .settings-tool-item .tool-item-icon { font-size: 1.2rem; }
+        .settings-tool-item .tool-item-name { flex: 1; font-weight: 500; }
+
+        .settings-tool-item .move-btns {
+            display: flex;
+            gap: 2px;
+        }
+
+        .settings-tool-item button {
+            padding: 4px 8px;
+            border: 1px solid var(--border);
+            background: var(--bg-secondary);
+            border-radius: 4px;
+            font-size: 0.75rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .settings-tool-item button:hover { background: var(--bg-primary); }
+
+        .add-tool-form {
             background: var(--bg-primary);
             border-radius: 8px;
+            padding: 14px;
+            margin-bottom: 16px;
         }
 
-        .tool-item-icon { font-size: 1.5rem; width: 40px; text-align: center; }
-        .tool-item-info { flex: 1; min-width: 0; }
-        .tool-item-name { font-weight: 500; font-size: 0.9rem; }
-        .tool-item-file { font-size: 0.75rem; color: var(--text-secondary); }
-
-        .tool-item-actions { display: flex; gap: 4px; }
-        .tool-item-actions button {
-            width: 28px; height: 28px;
-            border-radius: 4px;
-            border: none;
-            cursor: pointer;
-            display: flex; align-items: center; justify-content: center;
-            font-size: 0.7rem;
-            transition: all 0.2s ease;
-            background: var(--border);
+        .add-tool-form label {
+            display: block;
+            font-size: 0.8rem;
             color: var(--text-secondary);
-        }
-        .tool-item-actions button:hover { background: var(--accent); color: var(--text-light); }
-        .tool-item-actions button.delete:hover { background: var(--danger); }
-        .tool-item-actions button.move { font-size: 0.6rem; }
-        .tool-item-actions button:disabled { opacity: 0.3; cursor: not-allowed; }
-        .tool-item-actions button:disabled:hover { background: var(--border); color: var(--text-secondary); }
-
-        .data-buttons { display: flex; gap: 8px; margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--border); }
-
-        .save-status { font-size: 0.8rem; color: var(--text-secondary); text-align: center; margin-top: 12px; }
-        .save-status.saved { color: var(--accent); }
-
-        #importInput { display: none; }
-
-        @keyframes fadeInUp {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
+            margin-bottom: 4px;
+            font-weight: 500;
         }
 
-        .animate-in { animation: fadeInUp 0.5s ease forwards; opacity: 0; }
+        .add-tool-form input, .add-tool-form textarea {
+            width: 100%;
+            padding: 8px 10px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.9rem;
+            margin-bottom: 10px;
+        }
 
-        @media (max-width: 600px) {
-            .container { padding: 40px 16px; }
-            h1 { font-size: 2rem; }
-            .tools-grid { gap: 16px; }
-            .tool-card { padding: 24px; }
+        .add-tool-form input:focus, .add-tool-form textarea:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .add-tool-form textarea { resize: vertical; height: 60px; }
+
+        .export-import-row {
+            display: flex;
+            gap: 8px;
+            margin-top: 16px;
+            padding-top: 16px;
+            border-top: 1px solid var(--border);
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <div class="header-top">
-            <button class="btn btn-settings" onclick="openPinModal()">⚙️ Settings</button>
-        </div>
-        
-        <header class="animate-in">
-            <h1>Featurepiece Tools</h1>
-            <p class="subtitle">Your workspace for pricing, calculations & more</p>
+        <header>
+            <div class="logo">Featurepiece Tools</div>
+            <p class="tagline">Photography & framing toolkit</p>
         </header>
 
-        <div class="tools-grid" id="toolsGrid"></div>
+        <div class="tools-grid" id="tools-grid"></div>
 
-        <footer class="animate-in" style="animation-delay: 0.3s;">
-            <p class="footer-text">Featurepiece Frames</p>
-        </footer>
+        <button class="settings-btn" onclick="showPinModal()">⚙ Settings</button>
     </div>
 
-    <div class="modal-overlay" id="pinModal">
+    <!-- PIN Modal -->
+    <div class="modal-overlay" id="pin-modal">
         <div class="modal">
-            <h3>Enter PIN</h3>
-            <p style="color: var(--text-secondary); font-size: 0.9rem; text-align: center;">Enter your PIN to access settings</p>
-            <div class="pin-input">
-                <input type="password" maxlength="1" id="pin1" oninput="handlePinInput(this, 'pin2')" onkeydown="handlePinKeydown(event, this, null)">
-                <input type="password" maxlength="1" id="pin2" oninput="handlePinInput(this, 'pin3')" onkeydown="handlePinKeydown(event, this, 'pin1')">
-                <input type="password" maxlength="1" id="pin3" oninput="handlePinInput(this, 'pin4')" onkeydown="handlePinKeydown(event, this, 'pin2')">
-                <input type="password" maxlength="1" id="pin4" oninput="handlePinInput(this, null)" onkeydown="handlePinKeydown(event, this, 'pin3')">
+            <h2>Enter PIN</h2>
+            <div class="pin-input-group">
+                <input type="password" id="pin-input" maxlength="4" placeholder="••••" onkeydown="if(event.key==='Enter')checkPin()">
             </div>
-            <p class="pin-error" id="pinError">Incorrect PIN. Please try again.</p>
-            <div class="modal-actions">
-                <button class="btn btn-secondary" onclick="closePinModal()">Cancel</button>
-                <button class="btn btn-primary" onclick="verifyPin()">Enter</button>
+            <div class="btn-row">
+                <button class="btn btn-secondary" onclick="closeModals()">Cancel</button>
+                <button class="btn btn-primary" onclick="checkPin()">Enter</button>
             </div>
         </div>
     </div>
 
-    <div class="modal-overlay" id="settingsModal">
+    <!-- Settings Modal -->
+    <div class="modal-overlay" id="settings-modal">
         <div class="modal">
-            <h3>⚙️ Settings</h3>
-            <div class="settings-section">
-                <h4>Tools</h4>
-                <div class="tools-list" id="toolsList"></div>
-                <button class="btn btn-primary btn-small" onclick="openAddToolModal()">+ Add Tool</button>
-            </div>
-            <div class="data-buttons">
-                <button class="btn btn-secondary btn-small" onclick="exportData()">📁 Export</button>
-                <button class="btn btn-secondary btn-small" onclick="document.getElementById('importInput').click()">📂 Import</button>
-                <input type="file" id="importInput" accept=".json" onchange="importData(event)">
-            </div>
-            <p class="save-status" id="saveStatus">Auto-saved to browser</p>
-            <div class="modal-actions" style="margin-top: 20px;">
-                <button class="btn btn-primary" onclick="closeSettingsModal()">Done</button>
-            </div>
-        </div>
-    </div>
+            <h2>Manage Tools</h2>
 
-    <div class="modal-overlay" id="toolModal">
-        <div class="modal">
-            <h3 id="toolModalTitle">Add Tool</h3>
-            <div class="form-group">
-                <label>Tool Name</label>
-                <input type="text" id="toolName" placeholder="e.g. Package Pricing">
-            </div>
-            <div class="form-group">
+            <ul class="settings-tool-list" id="settings-tool-list"></ul>
+
+            <div class="add-tool-form" id="add-tool-form">
+                <h3 style="font-family: 'Playfair Display', serif; font-size: 0.95rem; margin-bottom: 10px;" id="form-title">Add New Tool</h3>
+                <label>Name</label>
+                <input type="text" id="tool-name" placeholder="e.g. Mount Calculator">
                 <label>Filename</label>
-                <input type="text" id="toolFile" placeholder="e.g. package-pricing.html">
-            </div>
-            <div class="form-group">
+                <input type="text" id="tool-file" placeholder="e.g. mount-calculator.html">
                 <label>Icon (emoji)</label>
-                <input type="text" id="toolIcon" placeholder="e.g. 📦" maxlength="4">
-            </div>
-            <div class="form-group">
+                <input type="text" id="tool-icon" placeholder="e.g. 🖽" maxlength="4">
                 <label>Description</label>
-                <textarea id="toolDescription" placeholder="Brief description of what this tool does"></textarea>
+                <textarea id="tool-desc" placeholder="Short description of what the tool does"></textarea>
+                <div class="btn-row" style="justify-content: flex-start;">
+                    <button class="btn btn-primary" id="form-submit-btn" onclick="addTool()">Add Tool</button>
+                    <button class="btn btn-secondary" id="form-cancel-btn" onclick="cancelEdit()" style="display:none;">Cancel</button>
+                </div>
             </div>
-            <input type="hidden" id="toolEditId">
-            <div class="modal-actions">
-                <button class="btn btn-secondary" onclick="closeToolModal()">Cancel</button>
-                <button class="btn btn-primary" onclick="saveTool()">Save</button>
+
+            <div class="export-import-row">
+                <button class="btn btn-secondary" onclick="exportData()">Export</button>
+                <button class="btn btn-secondary" onclick="document.getElementById('import-file').click()">Import</button>
+                <input type="file" id="import-file" accept=".json" onchange="importData(event)" style="display:none;">
+                <button class="btn btn-danger" onclick="resetData()">Reset</button>
+            </div>
+
+            <div class="btn-row">
+                <button class="btn btn-secondary" onclick="closeModals()">Close</button>
             </div>
         </div>
     </div>
 
     <script>
-        const STORAGE_KEY = 'featurepiece-tools-menu';
-        
+        const STORAGE_KEY = 'featurepiece-tools';
+
         const defaultData = {
             tools: [
                 { id: 1, name: 'Package Pricing', file: 'package-pricing.html', icon: '📦', description: 'Create and price photography packages with markup calculations, category management, and customer-friendly summaries.' },
                 { id: 2, name: 'Material Calculator', file: 'material-calculator.html', icon: '✂️', description: 'Calculate material usage and optimise cuts for mounts, frames, and other photography materials.' },
                 { id: 3, name: 'Photo Resize Calculator', file: 'photo-resize-calculator.html', icon: '🖼️', description: 'Calculate dimensions and cropping for your prints with DPI conversion and aspect ratio tools.' },
                 { id: 4, name: 'Mount Calculator', file: 'mount-calculator.html', icon: '🖽', description: 'Calculate custom mount pricing with options for double mounts, backing boards, and bulk discounts.' },
-                { id: 5, name: 'Moulding Calculator', file: 'moulding-calculator.html', icon: '📏', description: 'Calculate required moulding length for frames.' }
+                { id: 5, name: 'Moulding Calculator', file: 'moulding-calculator.html', icon: '📏', description: 'Calculate required moulding length for frames with cutting optimisation.' }
             ],
             pin: '3786',
             nextToolId: 6
         };
 
-        let data = { ...defaultData };
-        let nextToolId = data.nextToolId;
+        let data = loadData();
+        let editingToolId = null;
 
-        // Load from localStorage on startup
-        function loadFromStorage() {
+        function loadData() {
             try {
                 const saved = localStorage.getItem(STORAGE_KEY);
-                if (saved) {
-                    const parsed = JSON.parse(saved);
-                    data.tools = parsed.tools || defaultData.tools;
-                    data.pin = parsed.pin || defaultData.pin;
-                    nextToolId = parsed.nextToolId || defaultData.nextToolId;
+                if (saved) return JSON.parse(saved);
+            } catch (e) {}
+            return JSON.parse(JSON.stringify(defaultData));
+        }
+
+        function saveData() {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+        }
+
+        function renderTools() {
+            const grid = document.getElementById('tools-grid');
+            grid.innerHTML = '';
+            data.tools.forEach(tool => {
+                const card = document.createElement('a');
+                card.href = tool.file;
+                card.className = 'tool-card';
+                card.innerHTML = `
+                    <div class="tool-icon">${tool.icon}</div>
+                    <div class="tool-name">${tool.name}</div>
+                    <div class="tool-description">${tool.description}</div>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        function renderSettingsList() {
+            const list = document.getElementById('settings-tool-list');
+            list.innerHTML = '';
+            data.tools.forEach((tool, index) => {
+                const li = document.createElement('li');
+                li.className = 'settings-tool-item';
+                li.innerHTML = `
+                    <span class="tool-item-icon">${tool.icon}</span>
+                    <span class="tool-item-name">${tool.name}</span>
+                    <div class="move-btns">
+                        <button onclick="moveTool(${index}, -1)" ${index === 0 ? 'disabled' : ''}>↑</button>
+                        <button onclick="moveTool(${index}, 1)" ${index === data.tools.length - 1 ? 'disabled' : ''}>↓</button>
+                    </div>
+                    <button onclick="editTool(${tool.id})">✏️</button>
+                    <button onclick="removeTool(${tool.id})">🗑️</button>
+                `;
+                list.appendChild(li);
+            });
+        }
+
+        function showPinModal() {
+            document.getElementById('pin-modal').classList.add('active');
+            document.getElementById('pin-input').value = '';
+            document.getElementById('pin-input').focus();
+        }
+
+        function checkPin() {
+            const input = document.getElementById('pin-input').value;
+            if (input === data.pin) {
+                document.getElementById('pin-modal').classList.remove('active');
+                renderSettingsList();
+                document.getElementById('settings-modal').classList.add('active');
+            } else {
+                document.getElementById('pin-input').value = '';
+                document.getElementById('pin-input').placeholder = 'Wrong PIN';
+                setTimeout(() => { document.getElementById('pin-input').placeholder = '••••'; }, 1500);
+            }
+        }
+
+        function closeModals() {
+            document.getElementById('pin-modal').classList.remove('active');
+            document.getElementById('settings-modal').classList.remove('active');
+            cancelEdit();
+        }
+
+        function addTool() {
+            const name = document.getElementById('tool-name').value.trim();
+            const file = document.getElementById('tool-file').value.trim();
+            const icon = document.getElementById('tool-icon').value.trim() || '🔧';
+            const desc = document.getElementById('tool-desc').value.trim();
+
+            if (!name || !file) return;
+
+            if (editingToolId !== null) {
+                const tool = data.tools.find(t => t.id === editingToolId);
+                if (tool) {
+                    tool.name = name;
+                    tool.file = file;
+                    tool.icon = icon;
+                    tool.description = desc;
                 }
-            } catch (e) {
-                console.log('No saved data found, using defaults');
+                editingToolId = null;
+                document.getElementById('form-title').textContent = 'Add New Tool';
+                document.getElementById('form-submit-btn').textContent = 'Add Tool';
+                document.getElementById('form-cancel-btn').style.display = 'none';
+            } else {
+                data.tools.push({ id: data.nextToolId++, name, file, icon, description: desc });
             }
+
+            saveData();
+            renderTools();
+            renderSettingsList();
+            clearForm();
         }
 
-        // Save to localStorage
-        function saveToStorage() {
-            try {
-                const saveObj = {
-                    tools: data.tools,
-                    pin: data.pin,
-                    nextToolId: nextToolId
-                };
-                localStorage.setItem(STORAGE_KEY, JSON.stringify(saveObj));
-                updateSaveStatus('✓ Saved');
-            } catch (e) {
-                console.error('Failed to save:', e);
-                updateSaveStatus('Save failed');
-            }
+        function editTool(id) {
+            const tool = data.tools.find(t => t.id === id);
+            if (!tool) return;
+            editingToolId = id;
+            document.getElementById('tool-name').value = tool.name;
+            document.getElementById('tool-file').value = tool.file;
+            document.getElementById('tool-icon').value = tool.icon;
+            document.getElementById('tool-desc').value = tool.description;
+            document.getElementById('form-title').textContent = 'Edit Tool';
+            document.getElementById('form-submit-btn').textContent = 'Save Changes';
+            document.getElementById('form-cancel-btn').style.display = 'inline-block';
         }
 
-        function updateSaveStatus(message) {
-            const status = document.getElementById('saveStatus');
-            status.textContent = message;
-            status.classList.add('saved');
-            setTimeout(() => {
-                status.textContent = 'Auto-saved to browser';
-                status.classList.remove('saved');
-            }, 2000);
+        function cancelEdit() {
+            editingToolId = null;
+            document.getElementById('form-title').textContent = 'Add New Tool';
+            document.getElementById('form-submit-btn').textContent = 'Add Tool';
+            document.getElementById('form-cancel-btn').style.display = 'none';
+            clearForm();
         }
 
-        function init() {
-            loadFromStorage();
-            renderToolsGrid();
+        function clearForm() {
+            document.getElementById('tool-name').value = '';
+            document.getElementById('tool-file').value = '';
+            document.getElementById('tool-icon').value = '';
+            document.getElementById('tool-desc').value = '';
         }
 
-        function renderToolsGrid() {
-            const grid = document.getElementById('toolsGrid');
-            if (data.tools.length === 0) {
-                grid.innerHTML = '<div class="empty-state"><div class="empty-state-icon">🔧</div><p>No tools yet. Open Settings to add your first tool.</p></div>';
-                return;
-            }
-            grid.innerHTML = data.tools.map((tool, i) => `
-                <a href="${escapeHtml(tool.file)}" class="tool-card animate-in" style="animation-delay: ${0.1 + i * 0.1}s;">
-                    <div class="tool-icon"><span>${tool.icon}</span></div>
-                    <div class="tool-name">${escapeHtml(tool.name)}</div>
-                    <div class="tool-description">${escapeHtml(tool.description)}</div>
-                    <div class="tool-arrow">→</div>
-                </a>
-            `).join('');
+        function removeTool(id) {
+            if (!confirm('Remove this tool from the menu?')) return;
+            data.tools = data.tools.filter(t => t.id !== id);
+            saveData();
+            renderTools();
+            renderSettingsList();
         }
 
-        function renderToolsList() {
-            const list = document.getElementById('toolsList');
-            if (data.tools.length === 0) {
-                list.innerHTML = '<p style="color: var(--text-secondary); font-size: 0.9rem; padding: 12px;">No tools added yet.</p>';
-                return;
-            }
-            list.innerHTML = data.tools.map((tool, i) => `
-                <div class="tool-item">
-                    <div class="tool-item-icon">${tool.icon}</div>
-                    <div class="tool-item-info">
-                        <div class="tool-item-name">${escapeHtml(tool.name)}</div>
-                        <div class="tool-item-file">${escapeHtml(tool.file)}</div>
-                    </div>
-                    <div class="tool-item-actions">
-                        <button class="move" onclick="moveTool(${tool.id}, -1)" title="Move up" ${i === 0 ? 'disabled' : ''}>▲</button>
-                        <button class="move" onclick="moveTool(${tool.id}, 1)" title="Move down" ${i === data.tools.length - 1 ? 'disabled' : ''}>▼</button>
-                        <button onclick="openEditToolModal(${tool.id})" title="Edit">✏️</button>
-                        <button class="delete" onclick="deleteTool(${tool.id})" title="Delete">🗑️</button>
-                    </div>
-                </div>
-            `).join('');
-        }
-
-        function moveTool(toolId, direction) {
-            const index = data.tools.findIndex(t => t.id === toolId);
-            if (index === -1) return;
+        function moveTool(index, direction) {
             const newIndex = index + direction;
             if (newIndex < 0 || newIndex >= data.tools.length) return;
-            [data.tools[index], data.tools[newIndex]] = [data.tools[newIndex], data.tools[index]];
-            renderToolsList();
-            saveToStorage();
-        }
-
-        function deleteTool(toolId) {
-            if (!confirm('Remove this tool from the menu?')) return;
-            data.tools = data.tools.filter(t => t.id !== toolId);
-            renderToolsList();
-            saveToStorage();
-        }
-
-        function openPinModal() {
-            document.getElementById('pinModal').classList.add('active');
-            ['pin1','pin2','pin3','pin4'].forEach(id => document.getElementById(id).value = '');
-            document.getElementById('pinError').classList.remove('show');
-            document.getElementById('pin1').focus();
-        }
-
-        function closePinModal() { document.getElementById('pinModal').classList.remove('active'); }
-
-        function handlePinInput(current, nextId) {
-            if (current.value.length === 1 && nextId) document.getElementById(nextId).focus();
-            if (!nextId && current.value.length === 1) verifyPin();
-        }
-
-        function handlePinKeydown(event, current, prevId) {
-            if (event.key === 'Backspace' && current.value === '' && prevId) document.getElementById(prevId).focus();
-        }
-
-        function verifyPin() {
-            const entered = ['pin1','pin2','pin3','pin4'].map(id => document.getElementById(id).value).join('');
-            if (entered === data.pin) { closePinModal(); openSettingsModal(); }
-            else {
-                document.getElementById('pinError').classList.add('show');
-                ['pin1','pin2','pin3','pin4'].forEach(id => document.getElementById(id).value = '');
-                document.getElementById('pin1').focus();
-            }
-        }
-
-        function openSettingsModal() {
-            document.getElementById('settingsModal').classList.add('active');
-            renderToolsList();
-        }
-
-        function closeSettingsModal() {
-            document.getElementById('settingsModal').classList.remove('active');
-            renderToolsGrid();
-        }
-
-        function openAddToolModal() {
-            document.getElementById('toolModalTitle').textContent = 'Add Tool';
-            ['toolName','toolFile','toolIcon','toolDescription','toolEditId'].forEach(id => document.getElementById(id).value = '');
-            document.getElementById('toolModal').classList.add('active');
-        }
-
-        function openEditToolModal(toolId) {
-            const tool = data.tools.find(t => t.id === toolId);
-            if (!tool) return;
-            document.getElementById('toolModalTitle').textContent = 'Edit Tool';
-            document.getElementById('toolName').value = tool.name;
-            document.getElementById('toolFile').value = tool.file;
-            document.getElementById('toolIcon').value = tool.icon;
-            document.getElementById('toolDescription').value = tool.description;
-            document.getElementById('toolEditId').value = toolId;
-            document.getElementById('toolModal').classList.add('active');
-        }
-
-        function closeToolModal() { document.getElementById('toolModal').classList.remove('active'); }
-
-        function saveTool() {
-            const name = document.getElementById('toolName').value.trim();
-            const file = document.getElementById('toolFile').value.trim();
-            const icon = document.getElementById('toolIcon').value.trim() || '🔧';
-            const description = document.getElementById('toolDescription').value.trim();
-            const editId = document.getElementById('toolEditId').value;
-
-            if (!name) { alert('Please enter a tool name'); return; }
-            if (!file) { alert('Please enter a filename'); return; }
-
-            if (editId) {
-                const tool = data.tools.find(t => t.id === parseInt(editId));
-                if (tool) { tool.name = name; tool.file = file; tool.icon = icon; tool.description = description; }
-            } else {
-                data.tools.push({ id: nextToolId++, name, file, icon, description });
-            }
-            closeToolModal();
-            renderToolsList();
-            saveToStorage();
+            const temp = data.tools[index];
+            data.tools[index] = data.tools[newIndex];
+            data.tools[newIndex] = temp;
+            saveData();
+            renderTools();
+            renderSettingsList();
         }
 
         function exportData() {
-            const exportObj = { tools: data.tools, pin: data.pin, nextToolId, exportDate: new Date().toISOString() };
-            const blob = new Blob([JSON.stringify(exportObj, null, 2)], { type: 'application/json' });
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `featurepiece-tools-${new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)}.json`;
-            document.body.appendChild(a);
+            a.download = 'featurepiece-tools-backup.json';
             a.click();
-            document.body.removeChild(a);
             URL.revokeObjectURL(url);
         }
 
@@ -561,34 +547,37 @@
             const reader = new FileReader();
             reader.onload = function(e) {
                 try {
-                    const obj = JSON.parse(e.target.result);
-                    if (!obj.tools) throw new Error('Invalid');
-                    data.tools = obj.tools;
-                    data.pin = obj.pin || '3786';
-                    nextToolId = obj.nextToolId || Math.max(...data.tools.map(t => t.id), 0) + 1;
-                    renderToolsList();
-                    renderToolsGrid();
-                    saveToStorage();
-                    alert('Imported successfully!');
-                } catch (err) { alert('Error importing file.'); }
+                    const imported = JSON.parse(e.target.result);
+                    if (imported.tools && Array.isArray(imported.tools)) {
+                        data = imported;
+                        saveData();
+                        renderTools();
+                        renderSettingsList();
+                    }
+                } catch (err) {
+                    alert('Invalid file format');
+                }
             };
             reader.readAsText(file);
             event.target.value = '';
         }
 
-        function escapeHtml(text) {
-            const div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
+        function resetData() {
+            if (!confirm('Reset all tools to defaults? This cannot be undone.')) return;
+            data = JSON.parse(JSON.stringify(defaultData));
+            saveData();
+            renderTools();
+            renderSettingsList();
         }
 
-        ['pinModal','settingsModal','toolModal'].forEach(id => {
-            document.getElementById(id).addEventListener('click', function(e) {
-                if (e.target === this) this.classList.remove('active');
+        // Close modals on overlay click
+        document.querySelectorAll('.modal-overlay').forEach(overlay => {
+            overlay.addEventListener('click', function(e) {
+                if (e.target === this) closeModals();
             });
         });
 
-        init();
+        renderTools();
     </script>
 </body>
 </html>
