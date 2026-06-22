@@ -100,7 +100,7 @@
             display: flex;
             gap: 24px;
             flex-wrap: wrap;
-            align-items: center;
+            align-items: flex-end;
         }
 
         .setting-group label {
@@ -164,6 +164,26 @@
         .switch.active .switch-knob { transform: translateX(24px); }
 
         .switch-label { font-size: 0.85rem; color: var(--text-secondary); }
+
+        .max-per-sheet {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .max-per-sheet-value {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--accent);
+            min-width: 24px;
+            text-align: center;
+        }
+
+        .max-per-sheet-note {
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+            font-style: italic;
+        }
 
         .main-grid {
             display: grid;
@@ -337,6 +357,18 @@
                         <span class="switch-label" id="rotation-label">Enabled</span>
                     </div>
                 </div>
+                <div class="setting-group">
+                    <label>Max Per Sheet</label>
+                    <div class="switch-container">
+                        <div class="switch" id="maxpersheet-switch" onclick="toggleMaxPerSheet()">
+                            <div class="switch-knob"></div>
+                        </div>
+                        <div class="max-per-sheet" id="max-per-sheet">
+                            <span class="max-per-sheet-value" id="max-per-sheet-value">—</span>
+                            <span class="max-per-sheet-note" id="max-per-sheet-note"></span>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <div class="main-grid">
@@ -408,6 +440,7 @@
     <script>
         let currentUnit = 'inches';
         let allowRotation = true;
+        let showMaxPerSheet = false;
         const INCH_TO_MM = 25.4;
 
         function setUnit(unit) {
@@ -426,7 +459,115 @@
             calculate();
         }
 
+        function toggleMaxPerSheet() {
+            showMaxPerSheet = !showMaxPerSheet;
+            const sw = document.getElementById('maxpersheet-switch');
+            sw.classList.toggle('active', showMaxPerSheet);
+            calculate();
+        }
+
+        function getMaxPerSheet(mw, mh, margin, gap, bw, bh, useRotation) {
+            const uw = bw - 2 * margin;
+            const uh = bh - 2 * margin;
+            if (uw <= 0 || uh <= 0) return 0;
+
+            let best = 0;
+
+            // Normal orientation
+            const nAcross = Math.floor((uw + gap) / (mw + gap));
+            const nDown = Math.floor((uh + gap) / (mh + gap));
+            best = Math.max(best, nAcross * nDown);
+
+            if (useRotation) {
+                // Rotated orientation
+                const rAcross = Math.floor((uw + gap) / (mh + gap));
+                const rDown = Math.floor((uh + gap) / (mw + gap));
+                best = Math.max(best, rAcross * rDown);
+
+                // Mixed: normal primary, fill gaps with rotated
+                const mix1Count = (function() {
+                    const layout = [], used = [];
+                    const overlaps = (x, y, w, h) => used.some(r => !(x + w + gap <= r.x || x >= r.x + r.width + gap || y + h + gap <= r.y || y >= r.y + r.height + gap));
+                    const tryAdd = (x, y, w, h) => {
+                        if (x >= margin && y >= margin && x + w <= bw - margin && y + h <= bh - margin && !overlaps(x, y, w, h)) {
+                            const p = { x, y, width: w, height: h };
+                            layout.push(p); used.push(p);
+                            return true;
+                        }
+                        return false;
+                    };
+                    for (let r = 0; r < nDown; r++) for (let c = 0; c < nAcross; c++) tryAdd(margin + c * (mw + gap), margin + r * (mh + gap), mw, mh);
+                    const scanStep = Math.min(10, Math.max(1, gap));
+                    for (let y = margin; y <= bh - margin - mw; y += scanStep) for (let x = margin; x <= bw - margin - mh; x += scanStep) tryAdd(x, y, mh, mw);
+                    return layout.length;
+                })();
+                best = Math.max(best, mix1Count);
+
+                // Mixed: rotated primary, fill gaps with normal
+                const mix2Count = (function() {
+                    const layout = [], used = [];
+                    const overlaps = (x, y, w, h) => used.some(r => !(x + w + gap <= r.x || x >= r.x + r.width + gap || y + h + gap <= r.y || y >= r.y + r.height + gap));
+                    const tryAdd = (x, y, w, h) => {
+                        if (x >= margin && y >= margin && x + w <= bw - margin && y + h <= bh - margin && !overlaps(x, y, w, h)) {
+                            const p = { x, y, width: w, height: h };
+                            layout.push(p); used.push(p);
+                            return true;
+                        }
+                        return false;
+                    };
+                    const rA = Math.floor((uw + gap) / (mh + gap));
+                    const rD = Math.floor((uh + gap) / (mw + gap));
+                    for (let r = 0; r < rD; r++) for (let c = 0; c < rA; c++) tryAdd(margin + c * (mh + gap), margin + r * (mw + gap), mh, mw);
+                    const scanStep = Math.min(10, Math.max(1, gap));
+                    for (let y = margin; y <= bh - margin - mh; y += scanStep) for (let x = margin; x <= bw - margin - mw; x += scanStep) tryAdd(x, y, mw, mh);
+                    return layout.length;
+                })();
+                best = Math.max(best, mix2Count);
+            }
+
+            return best;
+        }
+
+        function updateMaxPerSheet() {
+            const w = parseFloat(document.getElementById('mount-width').value) || 0;
+            const h = parseFloat(document.getElementById('mount-height').value) || 0;
+            const margin = parseFloat(document.getElementById('edge-margin').value) || 0;
+            const gap = parseFloat(document.getElementById('gap-between').value) || 0;
+            const bw = parseFloat(document.getElementById('board-width').value) || 0;
+            const bh = parseFloat(document.getElementById('board-height').value) || 0;
+
+            const valueEl = document.getElementById('max-per-sheet-value');
+            const noteEl = document.getElementById('max-per-sheet-note');
+
+            if (!showMaxPerSheet) {
+                valueEl.textContent = '—';
+                noteEl.textContent = '';
+                return;
+            }
+
+            if (w <= 0 || h <= 0 || bw <= 0 || bh <= 0) {
+                valueEl.textContent = '—';
+                noteEl.textContent = '';
+                return;
+            }
+
+            const mw = currentUnit === 'inches' ? w * INCH_TO_MM : w;
+            const mh = currentUnit === 'inches' ? h * INCH_TO_MM : h;
+
+            const max = getMaxPerSheet(mw, mh, margin, gap, bw, bh, allowRotation);
+
+            if (max <= 0) {
+                valueEl.textContent = '0';
+                noteEl.textContent = 'Too large for board';
+            } else {
+                valueEl.textContent = max;
+                noteEl.textContent = allowRotation ? 'With rotation' : 'Without rotation';
+            }
+        }
+
         function calculate() {
+            updateMaxPerSheet();
+
             const w = parseFloat(document.getElementById('mount-width').value) || 0;
             const h = parseFloat(document.getElementById('mount-height').value) || 0;
             const qty = parseInt(document.getElementById('quantity').value) || 0;
@@ -439,7 +580,7 @@
             const resultsContainer = document.getElementById('results-container');
             const previewContainer = document.getElementById('preview-container');
 
-            if (w <= 0 || h <= 0 || qty <= 0 || bw <= 0 || bh <= 0) {
+            if (w <= 0 || h <= 0 || bw <= 0 || bh <= 0) {
                 resultsContainer.innerHTML = '<p class="empty-state">Enter specifications</p>';
                 previewContainer.innerHTML = '<p class="empty-state">Enter specifications to see preview</p>';
                 return;
@@ -519,6 +660,27 @@
             if (best.perBoard <= 0) {
                 resultsContainer.innerHTML = '<p class="empty-state">Pieces too large for board</p>';
                 previewContainer.innerHTML = '<p class="empty-state">Adjust dimensions</p>';
+                return;
+            }
+
+            // If no quantity entered, show filled board preview only when Max Per Sheet is on
+            if (qty <= 0) {
+                resultsContainer.innerHTML = '<p class="empty-state">Enter quantity for full results</p>';
+                if (showMaxPerSheet) {
+                    previewContainer.innerHTML = `<div class="space-y">
+                        <div class="preview-section">
+                            <div class="preview-title">Max Per Sheet Layout</div>
+                            <svg class="preview-svg" viewBox="0 0 ${bw} ${bh}">
+                                <rect x="0" y="0" width="${bw}" height="${bh}" fill="#fafafa" stroke="#2c3e50" stroke-width="3"/>
+                                ${margin > 0 ? `<rect x="${margin}" y="${margin}" width="${bw - 2 * margin}" height="${bh - 2 * margin}" fill="none" stroke="#c0392b" stroke-dasharray="5,5"/>` : ''}
+                                ${best.layout.map(p => `<rect x="${p.x + 1}" y="${p.y + 1}" width="${p.width - 2}" height="${p.height - 2}" fill="${p.rotated ? '#fef3c7' : 'rgba(201,168,124,0.3)'}" stroke="${p.rotated ? '#f59e0b' : '#c9a87c'}" stroke-width="2"/>`).join('')}
+                            </svg>
+                            <div class="preview-count">${best.perBoard} pieces per board</div>
+                        </div>
+                    </div>`;
+                } else {
+                    previewContainer.innerHTML = '<p class="empty-state">Enter specifications to see preview</p>';
+                }
                 return;
             }
 
