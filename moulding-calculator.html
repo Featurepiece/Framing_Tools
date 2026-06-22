@@ -340,6 +340,61 @@
             border-radius: 2px;
         }
 
+        .frame-entry {
+            background: var(--bg-primary);
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 10px;
+            position: relative;
+            border: 1px solid var(--border);
+        }
+
+        .frame-entry-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .frame-entry-label {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+        }
+
+        .remove-frame-btn {
+            padding: 2px 8px;
+            border: none;
+            background: rgba(192, 57, 43, 0.1);
+            color: var(--danger);
+            border-radius: 4px;
+            font-size: 0.75rem;
+            cursor: pointer;
+            font-family: 'DM Sans', sans-serif;
+            transition: all 0.2s;
+        }
+
+        .remove-frame-btn:hover { background: rgba(192, 57, 43, 0.2); }
+
+        .add-frame-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 14px;
+            border: 1px dashed var(--accent);
+            background: transparent;
+            border-radius: 6px;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: var(--accent);
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-bottom: 12px;
+        }
+
+        .add-frame-btn:hover { background: rgba(201, 168, 124, 0.1); }
+
         .cutting-summary {
             margin-top: 14px;
             padding: 12px 14px;
@@ -401,32 +456,22 @@
         <div class="left-col">
             <!-- Direct Entry Mode -->
             <div id="direct-panel" class="panel">
-                <div class="panel-title">Glass Size</div>
+                <div class="panel-title">Moulding</div>
                 <div class="input-group">
                     <div class="field">
-                        <label>Width (Glass Size)</label>
-                        <input type="number" id="glass-width" oninput="liveUpdate()">
+                        <label>Moulding Width</label>
+                        <input type="number" id="moulding-width-direct" oninput="liveUpdate()">
+                        <div class="moulding-unit-note">Always in mm</div>
                     </div>
                     <div class="field">
-                        <label>Height (Glass Size)</label>
-                        <input type="number" id="glass-height" oninput="liveUpdate()">
-                    </div>
-                </div>
-                <div class="field" style="max-width:180px;">
-                    <label>Moulding Width</label>
-                    <input type="number" id="moulding-width-direct" oninput="liveUpdate()">
-                    <div class="moulding-unit-note">Always in mm</div>
-                </div>
-                <div class="extras-row">
-                    <div class="field">
-                        <label>Number of Frames</label>
-                        <input type="number" id="num-frames-direct" value="1" min="1" oninput="liveUpdate()">
-                    </div>
-                    <div class="field">
-                        <label>Length Size (mm)</label>
+                        <label>Stick Length (mm)</label>
                         <input type="number" id="stock-length-direct" value="3000" min="1" oninput="liveUpdate()">
                     </div>
                 </div>
+
+                <div class="panel-title" style="margin-top: 14px;">Dimensions <span style="font-weight:400; color: var(--text-secondary); font-size: 0.8rem;">(Glass Size)</span></div>
+                <div id="frames-container"></div>
+                <button class="add-frame-btn" onclick="addFrame()">+ Add Frame</button>
             </div>
 
             <!-- Artwork Mode -->
@@ -538,6 +583,8 @@
     <script>
         let currentMode = 'direct';
         let currentUnit = 'mm';
+        let frameCounter = 0;
+        let frames = [];
 
         function setMode(mode) {
             currentMode = mode;
@@ -553,6 +600,65 @@
             document.getElementById('btn-mm').classList.toggle('active', unit === 'mm');
             document.getElementById('btn-inches').classList.toggle('active', unit === 'inches');
             liveUpdate();
+        }
+
+        function addFrame() {
+            frameCounter++;
+            const savedValues = saveFrameValues();
+            frames.push(frameCounter);
+            renderFrames(savedValues);
+            liveUpdate();
+        }
+
+        function removeFrame(id) {
+            const savedValues = saveFrameValues();
+            frames = frames.filter(f => f !== id);
+            renderFrames(savedValues);
+            liveUpdate();
+        }
+
+        function saveFrameValues() {
+            const saved = {};
+            frames.forEach(id => {
+                saved[id] = {
+                    w: document.getElementById(`frame-w-${id}`)?.value || '',
+                    h: document.getElementById(`frame-h-${id}`)?.value || '',
+                    q: document.getElementById(`frame-q-${id}`)?.value || '1'
+                };
+            });
+            return saved;
+        }
+
+        function renderFrames(savedValues) {
+            if (!savedValues) savedValues = {};
+            const container = document.getElementById('frames-container');
+            container.innerHTML = '';
+            frames.forEach((id, index) => {
+                const vals = savedValues[id] || { w: '', h: '', q: '1' };
+                const entry = document.createElement('div');
+                entry.className = 'frame-entry';
+                entry.innerHTML = `
+                    <div class="frame-entry-header">
+                        <span class="frame-entry-label">Frame ${index + 1}</span>
+                        ${frames.length > 1 ? `<button class="remove-frame-btn" onclick="removeFrame(${id})">✕ Remove</button>` : ''}
+                    </div>
+                    <div class="input-group">
+                        <div class="field">
+                            <label>Width</label>
+                            <input type="number" id="frame-w-${id}" oninput="liveUpdate()" value="${vals.w}">
+                        </div>
+                        <div class="field">
+                            <label>Height</label>
+                            <input type="number" id="frame-h-${id}" oninput="liveUpdate()" value="${vals.h}">
+                        </div>
+                        <div class="field" style="max-width:100px;">
+                            <label>Quantity</label>
+                            <input type="number" id="frame-q-${id}" value="${vals.q}" min="1" oninput="liveUpdate()">
+                        </div>
+                    </div>
+                `;
+                container.appendChild(entry);
+            });
         }
 
         function equalAllSides() {
@@ -581,19 +687,45 @@
         function unitLabel() { return currentUnit === 'mm' ? 'mm' : 'inches'; }
 
         function liveUpdate() {
-            let glassW_mm, glassH_mm, mouldW_mm, numFrames, stockLen;
+            let allPieces = [];
+            let totalAll = 0;
+            let stockLen;
 
             if (currentMode === 'direct') {
-                const w = parseFloat(document.getElementById('glass-width').value);
-                const h = parseFloat(document.getElementById('glass-height').value);
-                const m = parseFloat(document.getElementById('moulding-width-direct').value);
-                numFrames = parseInt(document.getElementById('num-frames-direct').value) || 1;
                 stockLen = parseFloat(document.getElementById('stock-length-direct').value) || 3000;
+                const mouldW = parseFloat(document.getElementById('moulding-width-direct').value);
+                if (isNaN(mouldW) || mouldW <= 0) { hideResults(); return; }
 
-                if (isNaN(w) || isNaN(h) || isNaN(m) || w <= 0 || h <= 0 || m <= 0) { hideResults(); return; }
-                glassW_mm = toMM(w);
-                glassH_mm = toMM(h);
-                mouldW_mm = m;
+                let hasValidFrame = false;
+
+                frames.forEach(id => {
+                    const w = parseFloat(document.getElementById(`frame-w-${id}`)?.value);
+                    const h = parseFloat(document.getElementById(`frame-h-${id}`)?.value);
+                    const q = parseInt(document.getElementById(`frame-q-${id}`)?.value) || 1;
+
+                    if (isNaN(w) || isNaN(h) || w <= 0 || h <= 0) return;
+
+                    hasValidFrame = true;
+                    const glassW_mm = toMM(w);
+                    const glassH_mm = toMM(h);
+                    const wastePerEnd = mouldW;
+                    const longRaw = Math.max(glassW_mm, glassH_mm);
+                    const shortRaw = Math.min(glassW_mm, glassH_mm);
+                    const longPiece = longRaw + 2 * wastePerEnd;
+                    const shortPiece = shortRaw + 2 * wastePerEnd;
+                    const totalPerFrame = 2 * longPiece + 2 * shortPiece;
+                    totalAll += totalPerFrame * q;
+
+                    for (let f = 0; f < q; f++) {
+                        allPieces.push({ len: longPiece, type: 'long', frame: id });
+                        allPieces.push({ len: longPiece, type: 'long', frame: id });
+                        allPieces.push({ len: shortPiece, type: 'short', frame: id });
+                        allPieces.push({ len: shortPiece, type: 'short', frame: id });
+                    }
+                });
+
+                if (!hasValidFrame) { hideResults(); return; }
+
                 document.getElementById('glass-size-result').style.display = 'none';
             } else {
                 const aw = parseFloat(document.getElementById('artwork-width').value);
@@ -603,51 +735,60 @@
                 const ml = parseFloat(document.getElementById('mount-left').value) || 0;
                 const mr = parseFloat(document.getElementById('mount-right').value) || 0;
                 const m = parseFloat(document.getElementById('moulding-width-artwork').value);
-                numFrames = parseInt(document.getElementById('num-frames-artwork').value) || 1;
+                const numFrames = parseInt(document.getElementById('num-frames-artwork').value) || 1;
                 stockLen = parseFloat(document.getElementById('stock-length-artwork').value) || 3000;
 
                 if (isNaN(aw) || isNaN(ah) || isNaN(m) ||
                     aw <= 0 || ah <= 0 || m <= 0) { hideResults(); return; }
 
-                glassW_mm = toMM(aw) + toMM(ml) + toMM(mr);
-                glassH_mm = toMM(ah) + toMM(mt) + toMM(mb);
-                mouldW_mm = m;
+                const glassW_mm = toMM(aw) + toMM(ml) + toMM(mr);
+                const glassH_mm = toMM(ah) + toMM(mt) + toMM(mb);
+                const mouldW_mm = m;
 
                 document.getElementById('glass-size-result').style.display = 'block';
                 document.getElementById('glass-dims').textContent = formatVal(glassW_mm) + ' \u00d7 ' + formatVal(glassH_mm) + ' ' + unitLabel();
                 document.getElementById('glass-dims-alt').textContent = formatValAlt(glassW_mm) + ' \u00d7 ' + formatValAlt(glassH_mm);
+
+                const wastePerEnd = mouldW_mm;
+                const longRaw = Math.max(glassW_mm, glassH_mm);
+                const shortRaw = Math.min(glassW_mm, glassH_mm);
+                const longPiece = longRaw + 2 * wastePerEnd;
+                const shortPiece = shortRaw + 2 * wastePerEnd;
+                const totalPerFrame = 2 * longPiece + 2 * shortPiece;
+                totalAll = totalPerFrame * numFrames;
+
+                for (let f = 0; f < numFrames; f++) {
+                    allPieces.push({ len: longPiece, type: 'long', frame: f + 1 });
+                    allPieces.push({ len: longPiece, type: 'long', frame: f + 1 });
+                    allPieces.push({ len: shortPiece, type: 'short', frame: f + 1 });
+                    allPieces.push({ len: shortPiece, type: 'short', frame: f + 1 });
+                }
+
+                document.getElementById('long-side-val').textContent = formatVal(longPiece) + ' ' + unitLabel();
+                document.getElementById('short-side-val').textContent = formatVal(shortPiece) + ' ' + unitLabel();
             }
-
-            if (numFrames < 1) numFrames = 1;
-
-            // Piece lengths including mitre (one moulding width per end)
-            const wastePerEnd = mouldW_mm;
-            const longRaw = Math.max(glassW_mm, glassH_mm);
-            const shortRaw = Math.min(glassW_mm, glassH_mm);
-            const longPiece = longRaw + 2 * wastePerEnd;
-            const shortPiece = shortRaw + 2 * wastePerEnd;
-
-            const totalPerFrame = 2 * longPiece + 2 * shortPiece;
-            const totalAll = totalPerFrame * numFrames;
 
             const u = unitLabel();
             document.getElementById('total-length').textContent = formatVal(totalAll) + ' ' + u;
-            document.getElementById('total-length-alt').textContent = formatValAlt(totalAll) +
-                (numFrames > 1 ? '  (' + formatVal(totalPerFrame) + ' ' + u + ' per frame)' : '');
-            document.getElementById('long-side-val').textContent = formatVal(longPiece) + ' ' + u;
-            document.getElementById('short-side-val').textContent = formatVal(shortPiece) + ' ' + u;
+            document.getElementById('total-length-alt').textContent = formatValAlt(totalAll);
+
+            if (currentMode === 'direct') {
+                // For multiple frame sizes, long/short doesn't apply simply
+                // Show total pieces count instead
+                const totalFrameCount = frames.reduce((sum, id) => {
+                    return sum + (parseInt(document.getElementById(`frame-q-${id}`)?.value) || 0);
+                }, 0);
+                document.getElementById('long-side-val').textContent = totalFrameCount;
+                document.getElementById('short-side-val').textContent = allPieces.length;
+                document.getElementById('long-side-val').closest('.result-item').querySelector('.result-label').textContent = 'Total Frames';
+                document.getElementById('short-side-val').closest('.result-item').querySelector('.result-label').textContent = 'Total Pieces';
+            } else {
+                document.getElementById('long-side-val').closest('.result-item').querySelector('.result-label').textContent = 'Long Side';
+                document.getElementById('short-side-val').closest('.result-item').querySelector('.result-label').textContent = 'Short Side';
+            }
 
             document.getElementById('results-container').style.display = 'block';
             document.getElementById('placeholder').style.display = 'none';
-
-            // Build all pieces
-            const allPieces = [];
-            for (let f = 0; f < numFrames; f++) {
-                allPieces.push({ len: longPiece, type: 'long', frame: f + 1 });
-                allPieces.push({ len: longPiece, type: 'long', frame: f + 1 });
-                allPieces.push({ len: shortPiece, type: 'short', frame: f + 1 });
-                allPieces.push({ len: shortPiece, type: 'short', frame: f + 1 });
-            }
 
             const bars = optimiseCuts(allPieces, stockLen);
             renderBars(bars, stockLen);
@@ -857,6 +998,8 @@
             document.getElementById('cut-panel').style.display = 'none';
         }
 
+        // Initialise with one frame
+        addFrame();
         hideResults();
     </script>
 </body>
