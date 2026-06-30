@@ -387,6 +387,8 @@
 
         .file-status.pending { color: var(--text-secondary); }
         .file-status.converting { color: var(--accent); }
+        .file-status.scanning { color: var(--accent); }
+        .file-status.scanned { color: var(--success); }
         .file-status.done { color: var(--success); }
         .file-status.error { color: var(--danger); }
 
@@ -778,21 +780,34 @@
                 btn.classList.add('active');
                 pdfMode = btn.dataset.mode;
                 updatePdfSettingsVisibility();
+                // Auto-scan when switching to extract mode with PDFs loaded
+                const hasPdf = pendingFiles.some(f => f.isPdf);
+                if (pdfMode === 'extract' && hasPdf) {
+                    autoScanPdfImages();
+                } else {
+                    extractPreviewPanel.style.display = 'none';
+                    extractGrid.innerHTML = '';
+                    scannedImages = [];
+                }
             });
         });
 
         function updatePdfSettingsVisibility() {
             const hasPdf = pendingFiles.some(f => f.isPdf);
+            const hasNonPdf = pendingFiles.some(f => !f.isPdf);
             pdfModeToggle.classList.toggle('visible', hasPdf);
 
             if (pdfMode === 'render') {
                 dpiGroup.style.display = hasPdf ? '' : 'none';
                 pdfPagesSetting.classList.toggle('visible', hasPdf);
                 pdfModeHint.textContent = 'Converts each page to an image at the chosen scale.';
+                convertBtn.style.display = '';
             } else {
                 dpiGroup.style.display = 'none';
                 pdfPagesSetting.classList.remove('visible');
                 pdfModeHint.textContent = 'Extracts embedded image objects at their original resolution.';
+                // Hide Convert button if only PDFs in extract mode (use Convert Selected instead)
+                convertBtn.style.display = (hasPdf && !hasNonPdf) ? 'none' : '';
             }
         }
 
@@ -867,6 +882,16 @@
 
         function checkPdfPresence() {
             updatePdfSettingsVisibility();
+            // Auto-scan when in extract mode with PDFs loaded
+            const hasPdf = pendingFiles.some(f => f.isPdf);
+            if (pdfMode === 'extract' && hasPdf) {
+                autoScanPdfImages();
+            } else {
+                // Hide preview if no PDFs or switched to render mode
+                extractPreviewPanel.style.display = 'none';
+                extractGrid.innerHTML = '';
+                scannedImages = [];
+            }
         }
 
         function formatSize(bytes) {
@@ -907,7 +932,8 @@
 
                 const status = document.createElement('span');
                 status.className = `file-status ${f.status}`;
-                status.textContent = f.status === 'pending' ? 'Ready' : f.status === 'converting' ? 'Converting…' : f.status === 'done' ? '✓ Done' : '✗ Error';
+                const statusLabels = { pending: 'Ready', converting: 'Converting…', scanning: 'Scanning…', scanned: '✓ Scanned', done: '✓ Done', error: '✗ Error' };
+                status.textContent = statusLabels[f.status] || f.status;
 
                 const removeBtn = document.createElement('button');
                 removeBtn.className = 'file-remove';
@@ -945,21 +971,11 @@
         // Convert
         convertBtn.addEventListener('click', async () => {
             if (pendingFiles.length === 0) return;
-
-            const hasPdfs = pendingFiles.some(f => f.isPdf);
-
-            // If extract mode and there are PDFs, scan and show preview first
-            if (pdfMode === 'extract' && hasPdfs) {
-                await scanPdfImages();
-                return;
-            }
-
             await runConversion();
         });
 
-        // Scan PDFs for embedded images and show preview grid
-        async function scanPdfImages() {
-            convertBtn.disabled = true;
+        // Auto-scan PDFs for embedded images and show preview grid
+        async function autoScanPdfImages() {
             scannedImages = [];
             extractPreviewPanel.style.display = 'none';
             extractGrid.innerHTML = '';
@@ -970,13 +986,13 @@
             let completed = 0;
 
             for (const f of pdfFiles) {
-                f.status = 'converting';
+                f.status = 'scanning';
                 renderFileList();
 
                 try {
                     const images = await scanPdfImageObjects(f.file, f.name);
                     scannedImages.push(...images);
-                    f.status = 'done';
+                    f.status = 'scanned';
                 } catch (err) {
                     console.error('Scan error:', err);
                     f.status = 'error';
@@ -988,15 +1004,11 @@
             }
 
             setTimeout(() => { progressBar.classList.remove('active'); }, 500);
-            convertBtn.disabled = false;
-
-            // Reset statuses back to pending for non-PDF files
-            pendingFiles.forEach(f => { if (!f.isPdf) f.status = 'pending'; });
-            // Reset PDF statuses too so they look clean
-            pendingFiles.forEach(f => { if (f.isPdf) f.status = 'pending'; });
-            renderFileList();
 
             if (scannedImages.length === 0) {
+                // Reset statuses
+                pendingFiles.forEach(f => { if (f.isPdf) f.status = 'pending'; });
+                renderFileList();
                 alert('No extractable images found in the PDF(s).');
                 return;
             }
@@ -1004,79 +1016,176 @@
             renderExtractPreview();
         }
 
-        // Extract image objects from PDF without converting — returns canvas data for preview
+        // Extract images directly from PDF binary data by scanning for image streams.
+        // This bypasses PDF.js's operator list entirely, which avoids async object
+        // resolution issues that cause extraction to silently fail.
         async function scanPdfImageObjects(file, fileName) {
             const arrayBuffer = await file.arrayBuffer();
-            const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+            const bytes = new Uint8Array(arrayBuffer);
             const baseName = fileName.replace(/\.[^.]+$/, '');
             const images = [];
             let imgIndex = 0;
 
-            for (let p = 1; p <= pdf.numPages; p++) {
-                const page = await pdf.getPage(p);
-                const ops = await page.getOperatorList();
+            // Strategy: find JPEG images by scanning for SOI markers (FF D8 FF)
+            // then find the matching EOI (FF D9). Filter out tiny images.
+            const jpegImages = findJpegStreams(bytes);
 
-                for (let i = 0; i < ops.fnArray.length; i++) {
-                    if (ops.fnArray[i] === 85 || ops.fnArray[i] === 82) {
-                        const imgName = ops.argsArray[i][0];
-                        try {
-                            const imgData = await new Promise((resolve, reject) => {
-                                page.objs.get(imgName, (data) => {
-                                    if (data) resolve(data);
-                                    else reject(new Error('No image data'));
-                                });
-                            });
+            for (const jpeg of jpegImages) {
+                try {
+                    const blob = new Blob([jpeg.data], { type: 'image/jpeg' });
+                    const url = URL.createObjectURL(blob);
 
-                            const canvas = document.createElement('canvas');
-                            const ctx = canvas.getContext('2d');
+                    // Load as Image to get dimensions and create canvas
+                    const img = await new Promise((resolve, reject) => {
+                        const im = new Image();
+                        im.onload = () => resolve(im);
+                        im.onerror = () => reject(new Error('Failed to decode JPEG'));
+                        im.src = url;
+                    });
 
-                            if (imgData instanceof HTMLImageElement || imgData instanceof ImageBitmap) {
-                                canvas.width = imgData.width;
-                                canvas.height = imgData.height;
-                                ctx.drawImage(imgData, 0, 0);
-                            } else if (imgData.data && imgData.width && imgData.height) {
-                                canvas.width = imgData.width;
-                                canvas.height = imgData.height;
-                                let imageDataObj;
-                                if (imgData.data.length === imgData.width * imgData.height * 4) {
-                                    imageDataObj = new ImageData(new Uint8ClampedArray(imgData.data), imgData.width, imgData.height);
-                                } else if (imgData.data.length === imgData.width * imgData.height * 3) {
-                                    const rgba = new Uint8ClampedArray(imgData.width * imgData.height * 4);
-                                    const rgb = imgData.data;
-                                    for (let j = 0, k = 0; j < rgb.length; j += 3, k += 4) {
-                                        rgba[k] = rgb[j]; rgba[k+1] = rgb[j+1]; rgba[k+2] = rgb[j+2]; rgba[k+3] = 255;
-                                    }
-                                    imageDataObj = new ImageData(rgba, imgData.width, imgData.height);
-                                } else {
-                                    continue;
-                                }
-                                ctx.putImageData(imageDataObj, 0, 0);
-                            } else {
-                                continue;
-                            }
+                    // Skip tiny images (icons, thumbnails, decorations)
+                    if (img.naturalWidth < 50 || img.naturalHeight < 50) {
+                        URL.revokeObjectURL(url);
+                        continue;
+                    }
 
-                            if (canvas.width < 50 || canvas.height < 50) continue;
+                    // Draw to canvas for later conversion
+                    const canvas = document.createElement('canvas');
+                    canvas.width = img.naturalWidth;
+                    canvas.height = img.naturalHeight;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0);
 
-                            imgIndex++;
-                            const previewUrl = canvas.toDataURL('image/jpeg', 0.6);
-                            images.push({
-                                canvas,
-                                previewUrl,
-                                width: canvas.width,
-                                height: canvas.height,
-                                baseName,
-                                index: imgIndex,
-                                page: p,
-                                selected: true
-                            });
-                        } catch (e) {
-                            console.warn('Could not extract image', imgName, e);
+                    imgIndex++;
+                    images.push({
+                        canvas,
+                        previewUrl: url, // reuse the blob URL for preview
+                        width: img.naturalWidth,
+                        height: img.naturalHeight,
+                        baseName,
+                        index: imgIndex,
+                        page: 0, // raw scan doesn't know page numbers
+                        selected: true
+                    });
+                } catch (e) {
+                    console.warn('Could not decode JPEG stream', e);
+                }
+            }
+
+            // If no JPEGs found via raw scan, try PNG signatures too
+            if (images.length === 0) {
+                const pngImages = findPngStreams(bytes);
+                for (const png of pngImages) {
+                    try {
+                        const blob = new Blob([png.data], { type: 'image/png' });
+                        const url = URL.createObjectURL(blob);
+                        const img = await new Promise((resolve, reject) => {
+                            const im = new Image();
+                            im.onload = () => resolve(im);
+                            im.onerror = () => reject(new Error('Failed to decode PNG'));
+                            im.src = url;
+                        });
+
+                        if (img.naturalWidth < 50 || img.naturalHeight < 50) {
+                            URL.revokeObjectURL(url);
+                            continue;
                         }
+
+                        const canvas = document.createElement('canvas');
+                        canvas.width = img.naturalWidth;
+                        canvas.height = img.naturalHeight;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0);
+
+                        imgIndex++;
+                        images.push({
+                            canvas,
+                            previewUrl: url,
+                            width: img.naturalWidth,
+                            height: img.naturalHeight,
+                            baseName,
+                            index: imgIndex,
+                            page: 0,
+                            selected: true
+                        });
+                    } catch (e) {
+                        console.warn('Could not decode PNG stream', e);
                     }
                 }
             }
 
             return images;
+        }
+
+        // Scan raw bytes for JPEG streams (SOI FF D8 FF ... EOI FF D9)
+        function findJpegStreams(bytes) {
+            const results = [];
+            let pos = 0;
+            const minSize = 5000; // ignore JPEGs smaller than ~5KB (likely thumbnails/icons)
+
+            while (pos < bytes.length - 3) {
+                // Find JPEG SOI marker: FF D8 FF
+                if (bytes[pos] === 0xFF && bytes[pos + 1] === 0xD8 && bytes[pos + 2] === 0xFF) {
+                    // Find the EOI marker: FF D9
+                    let eoi = pos + 3;
+                    while (eoi < bytes.length - 1) {
+                        if (bytes[eoi] === 0xFF && bytes[eoi + 1] === 0xD9) {
+                            const length = eoi - pos + 2;
+                            if (length >= minSize) {
+                                results.push({
+                                    data: bytes.slice(pos, eoi + 2),
+                                    offset: pos,
+                                    length
+                                });
+                            }
+                            pos = eoi + 2;
+                            break;
+                        }
+                        eoi++;
+                    }
+                    if (eoi >= bytes.length - 1) break;
+                } else {
+                    pos++;
+                }
+            }
+            return results;
+        }
+
+        // Scan raw bytes for PNG streams (signature 89 50 4E 47 ... IEND chunk)
+        function findPngStreams(bytes) {
+            const results = [];
+            const pngSig = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];
+            const iend = [0x49, 0x45, 0x4E, 0x44];
+            let pos = 0;
+
+            while (pos < bytes.length - 8) {
+                let match = true;
+                for (let j = 0; j < 8; j++) {
+                    if (bytes[pos + j] !== pngSig[j]) { match = false; break; }
+                }
+                if (match) {
+                    // Find IEND chunk
+                    let end = pos + 8;
+                    while (end < bytes.length - 8) {
+                        if (bytes[end] === iend[0] && bytes[end+1] === iend[1] &&
+                            bytes[end+2] === iend[2] && bytes[end+3] === iend[3]) {
+                            // IEND chunk is 4 bytes type + 4 bytes CRC after
+                            const finalPos = end + 4 + 4;
+                            const length = finalPos - pos;
+                            if (length > 1000) {
+                                results.push({ data: bytes.slice(pos, finalPos), offset: pos, length });
+                            }
+                            pos = finalPos;
+                            break;
+                        }
+                        end++;
+                    }
+                    if (end >= bytes.length - 8) break;
+                } else {
+                    pos++;
+                }
+            }
+            return results;
         }
 
         // Render the preview grid with selectable thumbnails
@@ -1104,10 +1213,23 @@
                 imgEl.className = 'extract-card-img';
                 imgEl.src = img.previewUrl;
                 imgEl.alt = `Image ${img.index}`;
+                imgEl.onerror = () => {
+                    // Fallback: replace broken image with a placeholder
+                    imgEl.style.display = 'none';
+                    const placeholder = document.createElement('div');
+                    placeholder.className = 'extract-card-img';
+                    placeholder.style.display = 'flex';
+                    placeholder.style.alignItems = 'center';
+                    placeholder.style.justifyContent = 'center';
+                    placeholder.style.fontSize = '1.6rem';
+                    placeholder.style.color = 'var(--text-secondary)';
+                    placeholder.textContent = '🖼️';
+                    imgEl.parentNode.insertBefore(placeholder, imgEl);
+                };
 
                 const info = document.createElement('div');
                 info.className = 'extract-card-info';
-                info.textContent = `${img.width} × ${img.height} · p${img.page}`;
+                info.textContent = `${img.width} × ${img.height}${img.page ? ' · p' + img.page : ''}`;
 
                 // Click card to toggle
                 card.addEventListener('click', (e) => {
