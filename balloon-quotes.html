@@ -358,30 +358,44 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--emerald)
       <div class="card card-pad" style="grid-column:1/-1">
         <h2 class="section-title">Sync across devices</h2>
         <p class="section-note">Keeps the laptop and phone on the same prices via a private jsonbin store. Works offline and catches up when back online.</p>
-        <div class="setgrid">
-          <div>
-            <label class="fld"><span>jsonbin Master Key</span>
-              <input type="password" id="s_key" placeholder="X-Master-Key" autocomplete="off"></label>
-            <label class="fld"><span>Bin ID</span>
-              <div class="inline">
-                <input type="text" id="s_bin" placeholder="e.g. 65a1f…">
-                <button class="btn ghost sm" id="s_createbin" style="white-space:nowrap">Create</button>
-              </div>
-            </label>
-            <div class="inline" style="margin-top:4px">
-              <button class="btn sm" id="s_syncnow">Sync now</button>
-              <button class="btn ghost sm" id="s_pull">Pull from cloud</button>
-            </div>
+        <div id="syncSummary" style="display:none">
+          <div class="inline" style="flex-wrap:wrap;gap:12px">
+            <span class="chip cat">Synced</span>
+            <span class="hint" style="margin:0">Store <code id="syncBinLabel"></code></span>
           </div>
-          <div>
-            <div class="eyebrow">First-time setup</div>
-            <ol class="steps">
-              <li>Make a free account at <a href="https://jsonbin.io" target="_blank" rel="noopener">jsonbin.io</a>.</li>
-              <li>Copy your <b>Master Key</b> from the API Keys page and paste it above.</li>
-              <li>Hit <b>Create</b> to make your store, or paste an existing <b>Bin ID</b>.</li>
-              <li>On any other device you use, enter the same Master Key and Bin ID once.</li>
-            </ol>
-            <div class="hint" style="margin-top:12px">Your key stays on this device only — it isn't in the app's code.</div>
+          <div class="inline" style="margin-top:14px;flex-wrap:wrap">
+            <button class="btn sm" id="s_syncnow2">Sync now</button>
+            <button class="btn ghost sm" id="s_pull2">Pull from cloud</button>
+            <button class="btn ghost sm" id="s_change">Change sync settings</button>
+          </div>
+        </div>
+        <div id="syncSetup">
+          <div class="setgrid">
+            <div>
+              <label class="fld"><span>jsonbin Master Key</span>
+                <input type="password" id="s_key" placeholder="X-Master-Key" autocomplete="off"></label>
+              <label class="fld"><span>Bin ID</span>
+                <div class="inline">
+                  <input type="text" id="s_bin" placeholder="e.g. 65a1f…">
+                  <button class="btn ghost sm" id="s_createbin" style="white-space:nowrap">Create</button>
+                </div>
+              </label>
+              <div class="inline" style="margin-top:4px;flex-wrap:wrap">
+                <button class="btn sm" id="s_syncnow">Sync now</button>
+                <button class="btn ghost sm" id="s_pull">Pull from cloud</button>
+                <button class="btn ghost sm" id="s_done" style="display:none">Done</button>
+              </div>
+            </div>
+            <div>
+              <div class="eyebrow">First-time setup</div>
+              <ol class="steps">
+                <li>Make a free account at <a href="https://jsonbin.io" target="_blank" rel="noopener">jsonbin.io</a>.</li>
+                <li>Copy your <b>Master Key</b> from the API Keys page and paste it above.</li>
+                <li>Hit <b>Create</b> to make your store, or paste an existing <b>Bin ID</b>.</li>
+                <li>On any other device you use, enter the same Master Key and Bin ID once.</li>
+              </ol>
+              <div class="hint" style="margin-top:12px">Your key stays on this device only — it isn't in the app's code.</div>
+            </div>
           </div>
         </div>
       </div>
@@ -511,7 +525,7 @@ function createBin(){
     .then(function(r){if(!r.ok)throw new Error(r.status);return r.json()})
     .then(function(j){
       var id=(j.metadata&&j.metadata.id)||j.id;
-      if(id){cfg.bin=id;saveCfg();document.getElementById("s_bin").value=id;setSync("ok","Synced");toast("Store created & saved")}
+      if(id){cfg.bin=id;saveCfg();linkedThisSession=true;document.getElementById("s_bin").value=id;setSync("ok","Synced");renderSync();toast("Store created & saved")}
     })
     .catch(function(e){setSync("err","Couldn't create");toast("Create failed — check the key")});
 }
@@ -731,6 +745,22 @@ function renderSettings(){
   document.getElementById("s_contact").value=s.contact||"";
   document.getElementById("s_key").value=cfg.key||"";
   document.getElementById("s_bin").value=cfg.bin||"";
+  renderSync();
+}
+var syncReveal=false, linkedThisSession=false;
+function renderSync(){
+  var configured=!!(cfg.key&&cfg.bin);
+  var showSetup=!configured||syncReveal;
+  var setup=document.getElementById("syncSetup"), summary=document.getElementById("syncSummary"), done=document.getElementById("s_done");
+  if(setup)setup.style.display=showSetup?"":"none";
+  if(summary)summary.style.display=(configured&&!syncReveal)?"":"none";
+  if(done)done.style.display=(configured&&showSetup)?"":"none";
+  if(configured){var lbl=document.getElementById("syncBinLabel");if(lbl)lbl.textContent=cfg.bin;}
+}
+function onCfgChange(){
+  var d=document.getElementById("s_done");if(d)d.style.display=(cfg.key&&cfg.bin)?"":"none";
+  // first time this device has both values, pull the shared catalogue rather than risk pushing the blank seed over it
+  if(cfg.key&&cfg.bin&&!linkedThisSession){linkedThisSession=true;pullCloud(true);}
 }
 
 /* ---------- events ---------- */
@@ -765,11 +795,15 @@ bindSetting("s_labour",function(v){data.settings.labour=parseFloat(v)||0});
 bindSetting("s_text",function(v){data.settings.text=parseFloat(v)||0});
 bindSetting("s_name",function(v){data.settings.name=v});
 bindSetting("s_contact",function(v){data.settings.contact=v});
-document.getElementById("s_key").addEventListener("input",function(){cfg.key=this.value.trim();saveCfg();});
-document.getElementById("s_bin").addEventListener("input",function(){cfg.bin=this.value.trim();saveCfg();});
+document.getElementById("s_key").addEventListener("input",function(){cfg.key=this.value.trim();saveCfg();onCfgChange();});
+document.getElementById("s_bin").addEventListener("input",function(){cfg.bin=this.value.trim();saveCfg();onCfgChange();});
 document.getElementById("s_createbin").onclick=createBin;
 document.getElementById("s_syncnow").onclick=function(){pushCloud()};
 document.getElementById("s_pull").onclick=function(){pullCloud(false)};
+document.getElementById("s_syncnow2").onclick=function(){pushCloud()};
+document.getElementById("s_pull2").onclick=function(){pullCloud(false)};
+document.getElementById("s_change").onclick=function(){syncReveal=true;renderSync();};
+document.getElementById("s_done").onclick=function(){syncReveal=false;renderSync();};
 
 document.getElementById("s_export").onclick=function(){
   var blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});
@@ -791,7 +825,7 @@ function toast(msg){var t=document.getElementById("toast");t.textContent=msg;t.c
 /* ---------- boot ---------- */
 window.go=go;
 renderAll();
-if(cfg.key&&cfg.bin){setSync("saving","Loading…");pullCloud(true);}else setSync("","Local only");
+if(cfg.key&&cfg.bin){linkedThisSession=true;setSync("saving","Loading…");pullCloud(true);}else setSync("","Local only");
 window.addEventListener("online",function(){if(cfg.key&&cfg.bin)pushCloud()});
 </script>
 </body>
