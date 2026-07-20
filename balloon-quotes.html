@@ -562,12 +562,13 @@ function renderBrand(){document.getElementById("brandName").textContent=data.set
 function renderPick(){
   var sel=document.getElementById("q_pick");
   var cur=sel.value;
-  var html='<optgroup label="Packages">';
+  var html='<option value="" disabled selected>Select an item or package…</option>';
+  html+='<optgroup label="Packages">';
   data.packages.forEach(function(p){html+='<option value="pkg:'+p.id+'">'+esc(p.name)+'</option>'});
   html+='</optgroup><optgroup label="Items">';
   data.items.forEach(function(i){html+='<option value="item:'+i.id+'">'+esc(i.name)+(i.cost==null?" (no price)":"")+'</option>'});
   html+='</optgroup>';
-  sel.innerHTML=html; if(cur)sel.value=cur;
+  sel.innerHTML=html; sel.value=cur||"";
 }
 
 function renderQuote(){
@@ -773,11 +774,12 @@ function go(v){
 document.getElementById("nav").addEventListener("click",function(e){if(e.target.dataset.view)go(e.target.dataset.view)});
 
 document.getElementById("q_add").onclick=function(){
-  var v=document.getElementById("q_pick").value;if(!v)return;
+  var picker=document.getElementById("q_pick");
+  var v=picker.value;if(!v){toast("Pick an item or package first");return;}
   var qty=Math.max(1,parseInt(document.getElementById("q_qty").value)||1);
   var parts=v.split(":");
   quote.lines.push({type:parts[0]==="pkg"?"pkg":"item",refId:parts[1],qty:qty});
-  document.getElementById("q_qty").value=1;renderQuote();
+  picker.value="";document.getElementById("q_qty").value=1;renderQuote();
 };
 document.getElementById("q_customer").oninput=function(){quote.customer=this.value};
 document.getElementById("q_occasion").oninput=function(){quote.occasion=this.value};
