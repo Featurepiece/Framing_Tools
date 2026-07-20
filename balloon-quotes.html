@@ -349,6 +349,16 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--emerald)
         <div class="hint">Markup applies to materials only. Labour, text and extras are added on top at face value.</div>
       </div>
 
+      <div class="card card-pad" style="grid-column:1/-1">
+        <h2 class="section-title">Categories</h2>
+        <p class="section-note">Group your inventory. Turn markup off for a category (like Hire) and its items are charged at the flat price you enter, with no markup.</p>
+        <div id="catList" class="rowlist" style="margin-bottom:14px"></div>
+        <div class="inline">
+          <input type="text" id="cat_new" placeholder="New category name">
+          <button class="btn sm" id="cat_add" style="white-space:nowrap">Add category</button>
+        </div>
+      </div>
+
       <div class="card card-pad">
         <h2 class="section-title">Your studio</h2>
         <p class="section-note">Shown in the header now, and on invoices later.</p>
@@ -436,7 +446,18 @@ var CFG_KEY="bq_config_v1";
 
 /* ---------- default catalogue (seeded from the studio's work; costs blank) ---------- */
 function uid(){return Math.random().toString(36).slice(2,9)}
-var CATEGORIES=["Latex","Chrome & metallic","Foil","Signage","Hire","Consumable","Other"];
+var DEFAULT_CATS=[
+  {name:"Latex",markup:true},
+  {name:"Chrome & metallic",markup:true},
+  {name:"Foil",markup:true},
+  {name:"Signage",markup:true},
+  {name:"Hire",markup:false},
+  {name:"Consumable",markup:true},
+  {name:"Other",markup:true}
+];
+function catNames(){return (data.categories||[]).map(function(c){return c.name});}
+function catByName(n){return (data.categories||[]).filter(function(c){return c.name===n})[0];}
+function itemHasMarkup(it){var c=catByName(it&&it.cat);return !c||c.markup!==false;}
 
 function seed(){
   var it=function(name,cat){return{id:uid(),name:name,cat:cat,cost:null}};
@@ -464,17 +485,28 @@ function seed(){
     pk("Kids birthday",[["Foil number balloon",1],["Character / themed foil",1],["Latex balloon — 11in",24],["Latex balloon — 5in",16],["Chrome latex balloon",6],["Fixings & consumables",1]]),
     pk("Adult milestone",[["Arched backdrop (hire)",1],["Printed panel — arch sign",1],["Foil number balloon",1],["Latex balloon — 16in",6],["Latex balloon — 11in",28],["Chrome latex balloon",10],["Fixings & consumables",1]])
   ];
-  return {items:items,packages:packages,settings:{mult:3,labour:0,text:0,name:"Squeeze Studio",contact:""}};
+  return {categories:DEFAULT_CATS.map(function(c){return{name:c.name,markup:c.markup}}),items:items,packages:packages,settings:{mult:3,labour:0,text:0,name:"Squeeze Studio",contact:""}};
 }
 
 /* ---------- state ---------- */
 var data;
+function ensureShape(d){
+  if(!d.settings)d.settings=seed().settings;
+  if(typeof d.settings.mult!=="number")d.settings.mult=3;
+  if(!Array.isArray(d.categories)||!d.categories.length){
+    d.categories=DEFAULT_CATS.map(function(c){return{name:c.name,markup:c.markup}});
+  }
+  (d.items||[]).forEach(function(it){
+    if(!it.cat)it.cat="Other";
+    if(!d.categories.some(function(c){return c.name===it.cat}))d.categories.push({name:it.cat,markup:true});
+  });
+  return d;
+}
 (function load(){
   var raw=LS.get(CACHE_KEY);
   if(raw){try{data=JSON.parse(raw)}catch(e){data=seed()}}
   else data=seed();
-  if(!data.settings)data.settings=seed().settings;
-  if(typeof data.settings.mult!=="number")data.settings.mult=3;
+  ensureShape(data);
 })();
 
 var cfg={key:"",bin:""};
@@ -514,7 +546,7 @@ function pullCloud(silent){
     .then(function(r){if(!r.ok)throw new Error(r.status);return r.json()})
     .then(function(j){
       var rec=j.record||j;
-      if(rec&&rec.items){data=rec;persist();setSync("ok","Synced");renderAll();if(!silent)toast("Pulled latest prices")}
+      if(rec&&rec.items){data=ensureShape(rec);persist();setSync("ok","Synced");renderAll();if(!silent)toast("Pulled latest prices")}
       else setSync("ok","Synced");
     })
     .catch(function(){setSync("off","Offline — using device copy")});
@@ -536,23 +568,25 @@ function itemById(id){return data.items.filter(function(x){return x.id===id})[0]
 function pkgById(id){return data.packages.filter(function(x){return x.id===id})[0]}
 function money(n){return "£"+(Number(n)||0).toFixed(2)}
 
-function packageMaterialCost(p){
-  var c=0;p.lines.forEach(function(l){var it=itemById(l.itemId);if(it&&it.cost!=null)c+=it.cost*l.qty});return c;
+function packageBuckets(p){
+  var markupCost=0, flat=0;
+  p.lines.forEach(function(l){var it=itemById(l.itemId);if(it&&it.cost!=null){if(itemHasMarkup(it))markupCost+=it.cost*l.qty;else flat+=it.cost*l.qty;}});
+  return {markupCost:markupCost,flat:flat};
 }
+function packageSell(p){var b=packageBuckets(p);return b.markupCost*(data.settings.mult||1)+b.flat;}
 function calc(){
-  var s=data.settings, matCost=0, fixedTotal=0;
+  var s=data.settings, matCost=0, flatCharge=0, fixedTotal=0;
   quote.lines.forEach(function(l){
-    if(l.type==="item"){var it=itemById(l.refId);if(it&&it.cost!=null)matCost+=it.cost*l.qty;}
-    else{var p=pkgById(l.refId);if(p){if(p.fixed!=null)fixedTotal+=p.fixed*l.qty;else matCost+=packageMaterialCost(p)*l.qty;}}
+    if(l.type==="item"){var it=itemById(l.refId);if(it&&it.cost!=null){if(itemHasMarkup(it))matCost+=it.cost*l.qty;else flatCharge+=it.cost*l.qty;}}
+    else{var p=pkgById(l.refId);if(p){if(p.fixed!=null){fixedTotal+=p.fixed*l.qty;}else{var b=packageBuckets(p);matCost+=b.markupCost*l.qty;flatCharge+=b.flat*l.qty;}}}
   });
   var matSell=matCost*(s.mult||1);
   var chars=(quote.text||"").length;
   var textCharge=chars*(s.text||0);
   var labour=(quote.hours||0)*(s.labour||0);
   var misc=quote.misc.reduce(function(a,m){return a+(Number(m.amt)||0)},0);
-  var total=matSell+textCharge+labour+misc+fixedTotal;
-  var cost=matCost+labour+misc+fixedTotal; // your outlay estimate (labour costed at charge-out as a floor)
-  return {matCost:matCost,matSell:matSell,mult:s.mult||1,chars:chars,textCharge:textCharge,
+  var total=matSell+flatCharge+textCharge+labour+misc+fixedTotal;
+  return {matCost:matCost,matSell:matSell,flat:flatCharge,mult:s.mult||1,chars:chars,textCharge:textCharge,
           labour:labour,misc:misc,fixed:fixedTotal,total:total,profit:matSell-matCost};
 }
 
@@ -585,11 +619,12 @@ function renderQuote(){
     wrap.innerHTML=quote.lines.map(function(l,idx){
       var nm,sub,amt;
       if(l.type==="item"){var it=itemById(l.refId);if(!it)return"";nm=it.name;
-        sub=it.cost==null?'<span style="color:var(--rose)">needs a price</span>':money(it.cost)+" each · your cost";
+        var flat=!itemHasMarkup(it);
+        sub=it.cost==null?'<span style="color:var(--rose)">needs a price</span>':money(it.cost)+" each · "+(flat?"set price":"your cost");
         amt=it.cost==null?"—":money(it.cost*l.qty);}
       else{var p=pkgById(l.refId);if(!p)return"";nm=p.name;
         if(p.fixed!=null){sub="set price";amt=money(p.fixed*l.qty);}
-        else{sub=p.lines.length+" items · materials";amt=money(packageMaterialCost(p)*l.qty);}}
+        else{sub=p.lines.length+" items";amt=money(packageSell(p)*l.qty);}}
       return '<div class="qline"><div><div class="ql-nm">'+esc(nm)+'</div><div class="ql-sub">'+sub+'</div></div>'
         +'<input class="mini-input tnum" type="number" min="1" value="'+l.qty+'" data-q="'+idx+'">'
         +'<div style="display:flex;gap:8px;align-items:center"><span class="ql-amt tnum">'+amt+'</span>'
@@ -622,6 +657,7 @@ function renderSummary(){
   var c=calc();
   var rows="";
   rows+=srow("Balloons & materials","your cost "+money(c.matCost)+" × "+c.mult+" markup",money(c.matSell));
+  if(c.flat>0)rows+=srow("Hire & set-price items","charged at cost, no markup",money(c.flat));
   if(c.fixed>0)rows+=srow("Set-price packages","",money(c.fixed));
   if(c.chars>0)rows+=srow("Custom text",c.chars+" characters",money(c.textCharge));
   rows+=srow("Labour",(quote.hours||0)+" hrs",money(c.labour));
@@ -640,7 +676,7 @@ var invFilter="All", invEditing=null;
 function renderInventory(){
   // filters
   var fb=document.getElementById("inv_filter");
-  var cats=["All"].concat(CATEGORIES);
+  var cats=["All"].concat(catNames());
   fb.innerHTML=cats.map(function(c){return '<button class="'+(invFilter===c?"active":"")+'" data-f="'+esc(c)+'">'+esc(c)+'</button>';}).join("");
   fb.querySelectorAll("[data-f]").forEach(function(b){b.onclick=function(){invFilter=b.dataset.f;renderInventory();}});
 
@@ -653,11 +689,18 @@ function renderInventory(){
   var ed=document.getElementById("inv_editor");
   if(invEditing){
     var e=invEditing;
+    var eFlat=function(cn){var c=catByName(cn);return c&&c.markup===false;};
     ed.innerHTML='<div class="editor"><div class="eyebrow">'+(e.id?"Edit item":"New item")+'</div>'
       +'<div class="grid2"><label class="fld" style="margin:0"><span>Name</span><input type="text" id="ie_name" value="'+esc(e.name||"")+'"></label>'
-      +'<label class="fld" style="margin:0"><span>Your cost</span><div class="prefix"><span>£</span><input class="tnum" type="number" min="0" step="0.01" id="ie_cost" value="'+(e.cost==null?"":e.cost)+'"></div></label></div>'
-      +'<label class="fld" style="margin:10px 0 12px"><span>Category</span><select id="ie_cat">'+CATEGORIES.map(function(c){return '<option'+(e.cat===c?" selected":"")+'>'+c+'</option>'}).join("")+'</select></label>'
+      +'<label class="fld" style="margin:0"><span id="ie_costlbl">'+(eFlat(e.cat)?"Set price":"Your cost")+'</span><div class="prefix"><span>£</span><input class="tnum" type="number" min="0" step="0.01" id="ie_cost" value="'+(e.cost==null?"":e.cost)+'"></div></label></div>'
+      +'<label class="fld" style="margin:10px 0 6px"><span>Category</span><select id="ie_cat">'+catNames().map(function(c){return '<option'+(e.cat===c?" selected":"")+'>'+esc(c)+'</option>'}).join("")+'</select></label>'
+      +'<div class="hint" id="ie_cathint" style="margin:0 0 12px">'+(eFlat(e.cat)?"This category is charged at a set price — no markup applied.":"")+'</div>'
       +'<div class="inline"><button class="btn sm" id="ie_save">Save item</button><button class="btn ghost sm" id="ie_cancel">Cancel</button></div></div>';
+    document.getElementById("ie_cat").onchange=function(){
+      var flat=eFlat(this.value);
+      document.getElementById("ie_costlbl").textContent=flat?"Set price":"Your cost";
+      document.getElementById("ie_cathint").textContent=flat?"This category is charged at a set price — no markup applied.":"";
+    };
     document.getElementById("ie_save").onclick=function(){
       var name=document.getElementById("ie_name").value.trim();if(!name){toast("Give it a name");return;}
       var costv=document.getElementById("ie_cost").value;
@@ -692,14 +735,14 @@ function renderPackages(){
       return '<div class="pkg-line"><select data-pl="'+idx+'">'+data.items.map(function(it){return '<option value="'+it.id+'"'+(it.id===l.itemId?" selected":"")+'>'+esc(it.name)+'</option>'}).join("")+'</select>'
         +'<input class="tnum" type="number" min="1" value="'+l.qty+'" data-pq="'+idx+'"><button class="btn danger tiny" data-pdel="'+idx+'">✕</button></div>';
     }).join("");
-    var matc=packageMaterialCost(p), sell=matc*(data.settings.mult||1);
+    var pb=packageBuckets(p), sell=pb.markupCost*(data.settings.mult||1)+pb.flat;
     ed.innerHTML='<div class="editor"><div class="eyebrow">'+(p._new?"New package":"Edit package")+'</div>'
       +'<label class="fld"><span>Package name</span><input type="text" id="pe_name" value="'+esc(p.name||"")+'"></label>'
       +'<label class="fld"><span><input type="checkbox" id="pe_fixedon" '+(p.fixed!=null?"checked":"")+'> Use a flat price instead of building from items</span>'
       +'<div class="prefix" id="pe_fixedwrap" style="'+(p.fixed==null?"display:none":"")+'"><span>£</span><input class="tnum" type="number" min="0" step="0.5" id="pe_fixed" value="'+(p.fixed==null?"":p.fixed)+'"></div></label>'
       +'<div id="pe_lines" style="'+(p.fixed!=null?"display:none":"")+'"><div class="eyebrow" style="margin-top:6px">Contents</div>'+(p.lines.length?lineHtml:'<div class="empty">No items yet.</div>')
       +'<button class="btn ghost sm" id="pe_addline" style="margin-top:8px">+ Add item</button>'
-      +'<div class="hint" style="margin-top:10px">Materials cost '+money(matc)+' → sells at '+money(sell)+' with markup, before labour & extras.</div></div>'
+      +'<div class="hint" style="margin-top:10px">'+(pb.flat>0?('Materials '+money(pb.markupCost)+' × markup + set-price items '+money(pb.flat)+' → '):'Materials cost '+money(pb.markupCost)+' → ')+'sells at '+money(sell)+', before labour & extras.</div></div>'
       +'<div class="inline" style="margin-top:14px"><button class="btn sm" id="pe_save">Save package</button><button class="btn ghost sm" id="pe_cancel">Cancel</button></div></div>';
 
     document.getElementById("pe_fixedon").onchange=function(){pkgEditing.fixed=this.checked?(pkgEditing.fixed||0):null;syncPkgEditFromDom();renderPackages();};
@@ -723,7 +766,7 @@ function renderPackages(){
   list.innerHTML=data.packages.map(function(p){
     var right,note;
     if(p.fixed!=null){right=money(p.fixed);note="flat price";}
-    else{var matc=packageMaterialCost(p);right=money(matc*(data.settings.mult||1));note=p.lines.length+" items · sells at (before labour)";}
+    else{right=money(packageSell(p));note=p.lines.length+" items · sells at (before labour)";}
     return '<div class="itemrow"><div><div class="nm">'+esc(p.name)+'</div><div class="meta">'+esc(note)+'</div></div>'
       +'<div class="cost tnum">'+right+'</div>'
       +'<div class="rowbtns"><button class="btn ghost tiny" data-pe="'+p.id+'">Edit</button><button class="btn danger tiny" data-prm="'+p.id+'">✕</button></div></div>';
@@ -747,7 +790,24 @@ function renderSettings(){
   document.getElementById("s_contact").value=s.contact||"";
   document.getElementById("s_key").value=cfg.key||"";
   document.getElementById("s_bin").value=cfg.bin||"";
-  renderSync();
+  renderSync();renderCategories();
+}
+function renderCategories(){
+  var wrap=document.getElementById("catList"); if(!wrap)return;
+  wrap.innerHTML=data.categories.map(function(c,idx){
+    var count=data.items.filter(function(i){return i.cat===c.name}).length;
+    return '<div class="itemrow"><div><div class="nm">'+esc(c.name)+'</div><div class="meta">'+count+' item'+(count===1?'':'s')+'</div></div>'
+      +'<label class="inline" style="gap:6px;font-size:12.5px;color:var(--muted);cursor:pointer;white-space:nowrap"><input type="checkbox" data-catmk="'+idx+'" '+(c.markup!==false?'checked':'')+'>Apply markup</label>'
+      +'<button class="btn danger tiny" data-catrm="'+idx+'">✕</button></div>';
+  }).join("");
+  wrap.querySelectorAll("[data-catmk]").forEach(function(cb){cb.onchange=function(){data.categories[+cb.dataset.catmk].markup=cb.checked;persist();renderAll();};});
+  wrap.querySelectorAll("[data-catrm]").forEach(function(b){b.onclick=function(){
+    var idx=+b.dataset.catrm, c=data.categories[idx];
+    var count=data.items.filter(function(i){return i.cat===c.name}).length;
+    if(data.categories.length<=1){toast("Keep at least one category");return;}
+    if(count>0){toast(count+" item"+(count>1?"s":"")+' still use "'+c.name+'" — move them first');return;}
+    if(confirm('Delete category "'+c.name+'"?')){data.categories.splice(idx,1);persist();renderAll();}
+  };});
 }
 var syncReveal=false, linkedThisSession=false;
 function renderSync(){
@@ -788,8 +848,16 @@ document.getElementById("q_text").oninput=function(){quote.text=this.value;var c
 document.getElementById("q_hours").oninput=function(){quote.hours=parseFloat(this.value)||0;document.getElementById("q_labinfo").innerHTML=(data.settings.labour?("at "+money(data.settings.labour)+"/hr = "+money(quote.hours*data.settings.labour)):'<span style="color:var(--rose)">Set an hourly rate in Settings</span>');renderSummary();};
 document.getElementById("q_addmisc").onclick=function(){quote.misc.push({label:"",amt:0});renderQuote();};
 
-document.getElementById("inv_new").onclick=function(){invEditing={name:"",cat:CATEGORIES[0],cost:null};renderInventory();};
+document.getElementById("inv_new").onclick=function(){invEditing={name:"",cat:(catNames()[0]||"Other"),cost:null};renderInventory();};
 document.getElementById("pkg_new").onclick=function(){pkgEditing={_new:true,name:"",fixed:null,lines:[]};renderPackages();};
+document.getElementById("cat_add").onclick=function(){
+  var inp=document.getElementById("cat_new"), name=inp.value.trim();
+  if(!name){toast("Name the category");return;}
+  if(catByName(name)){toast("That category already exists");return;}
+  data.categories.push({name:name,markup:true});
+  inp.value="";persist();renderAll();toast("Category added");
+};
+document.getElementById("cat_new").addEventListener("keydown",function(e){if(e.key==="Enter")document.getElementById("cat_add").click();});
 
 /* settings inputs */
 function bindSetting(id,fn){document.getElementById(id).addEventListener("input",function(){fn(this.value);persist();renderBrand();renderQuote();})}
@@ -816,7 +884,7 @@ document.getElementById("s_export").onclick=function(){
 document.getElementById("s_import").onclick=function(){document.getElementById("s_file").click()};
 document.getElementById("s_file").onchange=function(e){
   var f=e.target.files[0];if(!f)return;var r=new FileReader();
-  r.onload=function(){try{var d=JSON.parse(r.result);if(d.items&&d.settings){data=d;persist();renderAll();toast("Backup loaded")}else toast("That file doesn't look right")}catch(err){toast("Couldn't read that file")}};
+  r.onload=function(){try{var d=JSON.parse(r.result);if(d.items&&d.settings){data=ensureShape(d);persist();renderAll();toast("Backup loaded")}else toast("That file doesn't look right")}catch(err){toast("Couldn't read that file")}};
   r.readAsText(f);
 };
 
