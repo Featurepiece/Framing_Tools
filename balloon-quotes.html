@@ -44,6 +44,7 @@ h1,h2,h3{font-family:"Fraunces",Georgia,serif;font-weight:500;margin:0;letter-sp
 button{font-family:inherit;cursor:pointer}
 input,select{font-family:inherit;font-size:15px;color:var(--ink)}
 .tnum{font-variant-numeric:tabular-nums}
+.masked{-webkit-text-security:disc;text-security:disc}
 
 /* ---- top bar ---- */
 .topbar{
@@ -373,7 +374,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--emerald)
           <div class="setgrid">
             <div>
               <label class="fld"><span>jsonbin Master Key</span>
-                <input type="password" id="s_key" placeholder="X-Master-Key" autocomplete="off"></label>
+                <input type="text" id="s_key" class="masked" placeholder="X-Master-Key" autocomplete="off" spellcheck="false" autocapitalize="off" autocorrect="off"></label>
               <label class="fld"><span>Bin ID</span>
                 <div class="inline">
                   <input type="text" id="s_bin" placeholder="e.g. 65a1f…">
