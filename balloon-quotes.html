@@ -228,6 +228,49 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--emerald)
   .brand .sub{display:none}
 }
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+/* overlay */
+#overlay{position:fixed;inset:0;background:rgba(33,29,26,.45);z-index:70;display:none;align-items:flex-start;justify-content:center;padding:24px;overflow:auto}
+#overlayCard{background:#fff;border-radius:var(--radius);max-width:780px;width:100%;box-shadow:var(--shadow);position:relative;margin:auto;padding:24px}
+#overlayClose{position:absolute;top:12px;right:14px;border:0;background:transparent;font-size:20px;color:var(--muted);cursor:pointer;line-height:1}
+#docToolbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px}
+/* document paper */
+.doc-head{display:flex;justify-content:space-between;gap:20px;align-items:flex-start;border-bottom:2px solid var(--emerald);padding-bottom:16px;margin-bottom:18px}
+.doc-logo{max-height:64px;max-width:180px;display:block;margin-bottom:8px}
+.doc-biz{font-family:"Fraunces",serif;font-size:22px;font-weight:600;color:var(--emerald)}
+.doc-sub{font-size:12.5px;color:var(--muted);margin-top:2px;line-height:1.45}
+.doc-meta{text-align:right;white-space:nowrap}
+.doc-type{font-family:"Fraunces",serif;font-size:21px;color:var(--gold);letter-spacing:.02em}
+.doc-num{font-weight:700;font-size:15px;margin-top:2px}
+.doc-parties{display:flex;gap:44px;flex-wrap:wrap;margin-bottom:20px}
+.doc-label{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--gold);font-weight:600;margin-bottom:4px}
+.doc-cust{font-weight:500;line-height:1.5}
+.doc-table{width:100%;border-collapse:collapse;margin-bottom:16px}
+.doc-table th{text-align:left;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--line-strong);padding:8px 0}
+.doc-table th.r,.doc-table td.r{text-align:right}
+.doc-table td{padding:10px 0;border-bottom:1px solid var(--line);vertical-align:top}
+.doc-table td .d{display:block;font-size:12px;color:var(--muted);margin-top:2px}
+.doc-table tfoot td{border-bottom:0;border-top:2px solid var(--emerald);font-family:"Fraunces",serif;font-size:18px;font-weight:600;padding-top:12px}
+.doc-block{margin-top:14px}
+.doc-terms{font-size:12.5px;color:var(--muted);white-space:pre-wrap;line-height:1.5}
+/* records */
+.badge{display:inline-block;font-size:11px;font-weight:600;padding:2px 9px;border-radius:999px}
+.badge.q{background:var(--gold-soft);color:var(--gold)}
+.badge.inv{background:var(--emerald-soft);color:var(--emerald)}
+.rec-cust{margin-bottom:14px}
+.rec-cust-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:6px}
+.rec-name{font-weight:600;font-size:16px}
+.rec-sub{font-size:12.5px;color:var(--muted);margin-top:2px}
+.rec-job{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:11px 0;border-top:1px solid var(--line)}
+.rec-occ{color:var(--muted);margin-left:6px}
+.rec-date{font-size:12px;color:var(--faint);margin-top:3px}
+/* print */
+@media print{
+  body.doc-print .topbar,body.doc-print .wrap,body.doc-print .mtotal,body.doc-print #toast,body.doc-print #overlayClose,body.doc-print #docToolbar{display:none!important}
+  body.doc-print{background:#fff!important}
+  body.doc-print #overlay{position:static!important;display:block!important;background:#fff!important;padding:0!important;overflow:visible!important}
+  body.doc-print #overlayCard{box-shadow:none!important;border:0!important;max-width:none!important;width:auto!important;margin:0!important;padding:0!important}
+}
 </style>
 </head>
 <body>
@@ -242,6 +285,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--emerald)
       <button data-view="quote" class="active">Quote</button>
       <button data-view="inventory">Inventory</button>
       <button data-view="packages">Packages</button>
+      <button data-view="records">Records</button>
       <button data-view="settings">Settings</button>
     </nav>
     <span class="sync-pill" id="syncPill"><span class="dot"></span><span id="syncText">Local only</span></span>
@@ -256,10 +300,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--emerald)
       <div>
         <div class="card card-pad" style="margin-bottom:20px">
           <div class="eyebrow">New quote</div>
-          <div class="grid2" style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-            <label class="fld" style="margin:0"><span>Customer</span><input type="text" id="q_customer" placeholder="e.g. Sarah M."></label>
-            <label class="fld" style="margin:0"><span>Occasion</span><input type="text" id="q_occasion" placeholder="e.g. Ella's christening"></label>
-          </div>
+          <label class="fld" style="margin:0"><span>Occasion / job name</span><input type="text" id="q_occasion" placeholder="e.g. Ella's christening"></label>
         </div>
 
         <div class="card card-pad" style="margin-bottom:20px">
@@ -299,6 +340,8 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--emerald)
             <button class="btn ghost sm" id="q_addmisc" style="margin-top:10px">+ Add a line</button>
           </div>
         </div>
+
+        <button class="btn gold" id="q_savebtn" style="width:100%;margin-top:20px;padding:13px">Save this quote</button>
       </div>
 
       <!-- summary -->
@@ -334,6 +377,18 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--emerald)
     </div>
   </section>
 
+  <!-- ================= RECORDS ================= -->
+  <section class="view" id="view-records">
+    <div class="card card-pad" style="margin-bottom:20px">
+      <h2 class="section-title">Records</h2>
+      <p class="section-note">Every saved quote and invoice, grouped by customer. Open one to view, print, or turn a quote into an invoice.</p>
+      <div class="toolbar">
+        <button class="btn sm" id="cust_new">+ New customer</button>
+      </div>
+    </div>
+    <div id="recordsBody"></div>
+  </section>
+
   <!-- ================= SETTINGS ================= -->
   <section class="view" id="view-settings">
     <div class="setgrid">
@@ -361,9 +416,28 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--emerald)
 
       <div class="card card-pad">
         <h2 class="section-title">Your studio</h2>
-        <p class="section-note">Shown in the header now, and on invoices later.</p>
+        <p class="section-note">Appears at the top of every quote and invoice.</p>
         <label class="fld"><span>Business name</span><input type="text" id="s_name" placeholder="e.g. Squeeze Studio"></label>
         <label class="fld"><span>Contact line</span><input type="text" id="s_contact" placeholder="phone · email · @handle"></label>
+        <label class="fld"><span>Address</span><textarea id="s_address" placeholder="Street&#10;Town&#10;Postcode"></textarea></label>
+        <label class="fld"><span>Logo (optional)</span>
+          <div class="inline"><button class="btn ghost sm" id="s_logobtn">Upload logo</button><button class="btn ghost sm" id="s_logoclear" style="display:none">Remove</button><input type="file" id="s_logofile" accept="image/*" style="display:none"></div>
+          <div id="s_logoprev" style="margin-top:10px"></div>
+        </label>
+      </div>
+
+      <div class="card card-pad">
+        <h2 class="section-title">Documents</h2>
+        <p class="section-note">Payment details, terms and numbering for quotes and invoices.</p>
+        <label class="fld"><span>Payment details (shown on invoices)</span><textarea id="s_payment" placeholder="e.g. Bank transfer — Sort 00-00-00 · Acc 00000000&#10;Payment due within 7 days"></textarea></label>
+        <label class="fld"><span>Quote terms</span><textarea id="s_qterms" placeholder="e.g. Quote valid for 30 days. 50% deposit secures the date."></textarea></label>
+        <label class="fld"><span>Invoice terms</span><textarea id="s_iterms" placeholder="e.g. Balloons are decor and not for consumption. Please keep away from small children."></textarea></label>
+        <div class="setgrid" style="gap:12px">
+          <label class="fld" style="margin:0"><span>Quote prefix</span><input type="text" id="s_qprefix" placeholder="Q-"></label>
+          <label class="fld" style="margin:0"><span>Next quote no.</span><input type="number" id="s_qnext" min="1" step="1" class="tnum"></label>
+          <label class="fld" style="margin:0"><span>Invoice prefix</span><input type="text" id="s_iprefix" placeholder="INV-"></label>
+          <label class="fld" style="margin:0"><span>Next invoice no.</span><input type="number" id="s_inext" min="1" step="1" class="tnum"></label>
+        </div>
       </div>
 
       <div class="card card-pad" style="grid-column:1/-1">
@@ -432,6 +506,8 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--emerald)
 
 <div class="toast" id="toast"></div>
 
+<div id="overlay"><div id="overlayCard"><button id="overlayClose" aria-label="Close">✕</button><div id="overlayBody"></div></div></div>
+
 <script>
 "use strict";
 
@@ -485,7 +561,7 @@ function seed(){
     pk("Kids birthday",[["Foil number balloon",1],["Character / themed foil",1],["Latex balloon — 11in",24],["Latex balloon — 5in",16],["Chrome latex balloon",6],["Fixings & consumables",1]]),
     pk("Adult milestone",[["Arched backdrop (hire)",1],["Printed panel — arch sign",1],["Foil number balloon",1],["Latex balloon — 16in",6],["Latex balloon — 11in",28],["Chrome latex balloon",10],["Fixings & consumables",1]])
   ];
-  return {categories:DEFAULT_CATS.map(function(c){return{name:c.name,markup:c.markup}}),items:items,packages:packages,settings:{mult:3,labour:0,text:0,name:"Squeeze Studio",contact:""}};
+  return {categories:DEFAULT_CATS.map(function(c){return{name:c.name,markup:c.markup}}),items:items,packages:packages,customers:[],jobs:[],settings:{mult:3,labour:0,text:0,name:"Squeeze Studio",contact:"",address:"",payment:"",quoteTerms:"",invoiceTerms:"",quotePrefix:"Q-",invoicePrefix:"INV-",nextQuote:1,nextInvoice:1,logo:""}};
 }
 
 /* ---------- state ---------- */
@@ -500,6 +576,10 @@ function ensureShape(d){
     if(!it.cat)it.cat="Other";
     if(!d.categories.some(function(c){return c.name===it.cat}))d.categories.push({name:it.cat,markup:true});
   });
+  var sd={address:"",payment:"",quoteTerms:"",invoiceTerms:"",quotePrefix:"Q-",invoicePrefix:"INV-",nextQuote:1,nextInvoice:1,logo:""};
+  for(var k in sd){if(!(k in d.settings))d.settings[k]=sd[k];}
+  if(!Array.isArray(d.customers))d.customers=[];
+  if(!Array.isArray(d.jobs))d.jobs=[];
   return d;
 }
 (function load(){
@@ -513,7 +593,7 @@ var cfg={key:"",bin:""};
 (function loadcfg(){var raw=LS.get(CFG_KEY);if(raw){try{cfg=JSON.parse(raw)}catch(e){}}})();
 
 /* current quote (device-local, not synced) */
-var quote={customer:"",occasion:"",lines:[],text:"",hours:0,misc:[]};
+var quote={customerId:null,occasion:"",lines:[],text:"",hours:0,misc:[]};
 
 /* ---------- persistence + sync ---------- */
 var saveTimer=null, syncTimer=null;
@@ -591,7 +671,7 @@ function calc(){
 }
 
 /* ---------- rendering ---------- */
-function renderAll(){renderBrand();renderPick();renderQuote();renderInventory();renderPackages();renderSettings();}
+function renderAll(){renderBrand();renderPick();renderQuote();renderInventory();renderPackages();renderRecords();renderSettings();}
 function renderBrand(){document.getElementById("brandName").textContent=data.settings.name||"Squeeze Studio";}
 
 function renderPick(){
@@ -607,7 +687,6 @@ function renderPick(){
 }
 
 function renderQuote(){
-  document.getElementById("q_customer").value=quote.customer;
   document.getElementById("q_occasion").value=quote.occasion;
   document.getElementById("q_text").value=quote.text;
   document.getElementById("q_hours").value=quote.hours;
@@ -788,6 +867,15 @@ function renderSettings(){
   document.getElementById("s_text").value=s.text||"";
   document.getElementById("s_name").value=s.name||"";
   document.getElementById("s_contact").value=s.contact||"";
+  document.getElementById("s_address").value=s.address||"";
+  document.getElementById("s_payment").value=s.payment||"";
+  document.getElementById("s_qterms").value=s.quoteTerms||"";
+  document.getElementById("s_iterms").value=s.invoiceTerms||"";
+  document.getElementById("s_qprefix").value=s.quotePrefix||"";
+  document.getElementById("s_qnext").value=s.nextQuote||1;
+  document.getElementById("s_iprefix").value=s.invoicePrefix||"";
+  document.getElementById("s_inext").value=s.nextInvoice||1;
+  renderLogoPrev();
   document.getElementById("s_key").value=cfg.key||"";
   document.getElementById("s_bin").value=cfg.bin||"";
   renderSync();renderCategories();
@@ -842,7 +930,6 @@ document.getElementById("q_add").onclick=function(){
   quote.lines.push({type:parts[0]==="pkg"?"pkg":"item",refId:parts[1],qty:qty});
   picker.value="";document.getElementById("q_qty").value=1;renderQuote();
 };
-document.getElementById("q_customer").oninput=function(){quote.customer=this.value};
 document.getElementById("q_occasion").oninput=function(){quote.occasion=this.value};
 document.getElementById("q_text").oninput=function(){quote.text=this.value;var c=this.value.length;document.getElementById("q_textinfo").innerHTML=c+" characters · "+money(c*(data.settings.text||0));renderSummary();};
 document.getElementById("q_hours").oninput=function(){quote.hours=parseFloat(this.value)||0;document.getElementById("q_labinfo").innerHTML=(data.settings.labour?("at "+money(data.settings.labour)+"/hr = "+money(quote.hours*data.settings.labour)):'<span style="color:var(--rose)">Set an hourly rate in Settings</span>');renderSummary();};
@@ -866,6 +953,30 @@ bindSetting("s_labour",function(v){data.settings.labour=parseFloat(v)||0});
 bindSetting("s_text",function(v){data.settings.text=parseFloat(v)||0});
 bindSetting("s_name",function(v){data.settings.name=v});
 bindSetting("s_contact",function(v){data.settings.contact=v});
+bindSetting("s_address",function(v){data.settings.address=v});
+bindSetting("s_payment",function(v){data.settings.payment=v});
+bindSetting("s_qterms",function(v){data.settings.quoteTerms=v});
+bindSetting("s_iterms",function(v){data.settings.invoiceTerms=v});
+bindSetting("s_qprefix",function(v){data.settings.quotePrefix=v});
+bindSetting("s_iprefix",function(v){data.settings.invoicePrefix=v});
+document.getElementById("s_qnext").addEventListener("input",function(){data.settings.nextQuote=Math.max(1,parseInt(this.value)||1);persist();});
+document.getElementById("s_inext").addEventListener("input",function(){data.settings.nextInvoice=Math.max(1,parseInt(this.value)||1);persist();});
+document.getElementById("s_logobtn").onclick=function(){document.getElementById("s_logofile").click();};
+document.getElementById("s_logoclear").onclick=function(){data.settings.logo="";persist();renderLogoPrev();toast("Logo removed");};
+document.getElementById("s_logofile").onchange=function(e){
+  var f=e.target.files[0];if(!f)return;var r=new FileReader();
+  r.onload=function(){var img=new Image();img.onload=function(){
+    var max=360,scale=Math.min(1,max/img.width),w=Math.round(img.width*scale),h=Math.round(img.height*scale);
+    var cv=document.createElement("canvas");cv.width=w;cv.height=h;cv.getContext("2d").drawImage(img,0,0,w,h);
+    try{data.settings.logo=cv.toDataURL("image/png");persist();renderLogoPrev();toast("Logo added");}catch(err){toast("Couldn't process that image");}
+  };img.onerror=function(){toast("Couldn't read that image");};img.src=r.result;};
+  r.readAsDataURL(f);
+};
+document.getElementById("q_savebtn").onclick=openSaveQuote;
+document.getElementById("cust_new").onclick=function(){openCustomerForm(null,false);};
+document.getElementById("overlayClose").onclick=closeOverlay;
+document.getElementById("overlay").addEventListener("click",function(e){if(e.target===this)closeOverlay();});
+window.addEventListener("afterprint",function(){document.body.classList.remove("doc-print");});
 document.getElementById("s_key").addEventListener("input",function(){cfg.key=this.value.trim();saveCfg();onCfgChange();});
 document.getElementById("s_bin").addEventListener("input",function(){cfg.bin=this.value.trim();saveCfg();onCfgChange();});
 document.getElementById("s_createbin").onclick=createBin;
@@ -892,6 +1003,154 @@ document.getElementById("s_file").onchange=function(e){
 function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
 var toastTimer;
 function toast(msg){var t=document.getElementById("toast");t.textContent=msg;t.classList.add("show");clearTimeout(toastTimer);toastTimer=setTimeout(function(){t.classList.remove("show")},2200);}
+
+/* ===== customers, jobs, documents ===== */
+function pad3(n){n=String(parseInt(n)||0);return n.length<3?("00"+n).slice(-3):n;}
+function customerById(id){return data.customers.filter(function(c){return c.id===id})[0];}
+function jobById(id){return data.jobs.filter(function(j){return j.id===id})[0];}
+function fmtDate(iso){if(!iso)return"";try{return new Date(iso).toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric"});}catch(e){return"";}}
+function byDateDesc(a,b){return (b.createdAt||"").localeCompare(a.createdAt||"");}
+function openOverlay(html){document.getElementById("overlayBody").innerHTML=html;document.getElementById("overlay").style.display="flex";}
+function closeOverlay(){document.getElementById("overlay").style.display="none";document.getElementById("overlayBody").innerHTML="";document.body.classList.remove("doc-print");}
+
+// customer-facing charge lines from a builder state (frozen at save time)
+function buildDoc(b){
+  var mult=data.settings.mult||1, lines=[];
+  (b.lines||[]).forEach(function(l){
+    if(l.type==="item"){var it=itemById(l.refId);if(!it||it.cost==null)return;
+      var each=itemHasMarkup(it)?it.cost*mult:it.cost;
+      lines.push({name:it.name,detail:l.qty+" × "+money(each),amount:each*l.qty});}
+    else{var p=pkgById(l.refId);if(!p)return;
+      var each2=(p.fixed!=null?p.fixed:packageSell(p));
+      lines.push({name:p.name,detail:l.qty>1?(l.qty+" × "+money(each2)):"",amount:each2*l.qty});}
+  });
+  var chars=(b.text||"").length;
+  if(chars>0)lines.push({name:"Custom text",detail:'“'+b.text+'”',amount:chars*(data.settings.text||0)});
+  var labour=(b.hours||0)*(data.settings.labour||0);
+  if(labour>0)lines.push({name:"Setup & labour",detail:(b.hours||0)+" hrs",amount:labour});
+  (b.misc||[]).forEach(function(m){var a=Number(m.amt)||0;if(a>0)lines.push({name:m.label||"Extra",detail:"",amount:a});});
+  return {lines:lines,total:lines.reduce(function(s,x){return s+x.amount},0)};
+}
+
+function openSaveQuote(){
+  if(!quote.lines.length){toast("Add something to the quote first");return;}
+  var opts=data.customers.slice().sort(function(a,b){return a.name.localeCompare(b.name)}).map(function(c){return '<option value="'+c.id+'"'+(quote.customerId===c.id?" selected":"")+'>'+esc(c.name)+'</option>'}).join("");
+  var html='<h2 class="section-title" style="margin-bottom:4px">Save quote</h2>'
+    +'<p class="section-note">Attach a customer so it lands in their records.</p>'
+    +'<label class="fld"><span>Customer</span><select id="sq_cust"><option value="">— choose —</option>'+opts+'</select></label>'
+    +'<button class="btn ghost sm" id="sq_new" style="margin-bottom:16px">＋ New customer</button>'
+    +'<div class="inline"><button class="btn" id="sq_save">Save quote</button><button class="btn ghost" id="sq_cancel">Cancel</button></div>';
+  openOverlay(html);
+  document.getElementById("sq_cancel").onclick=closeOverlay;
+  document.getElementById("sq_new").onclick=function(){openCustomerForm(null,true);};
+  document.getElementById("sq_save").onclick=function(){var cid=document.getElementById("sq_cust").value;if(!cid){toast("Choose or add a customer");return;}doSaveQuote(cid);};
+}
+function doSaveQuote(customerId){
+  var b={lines:quote.lines.map(function(l){return{type:l.type,refId:l.refId,qty:l.qty}}),text:quote.text,hours:quote.hours,misc:quote.misc.map(function(m){return{label:m.label,amt:m.amt}})};
+  var no=(data.settings.quotePrefix||"Q-")+pad3(data.settings.nextQuote||1);
+  data.settings.nextQuote=(data.settings.nextQuote||1)+1;
+  var cust=customerById(customerId);
+  var job={id:uid(),quoteNo:no,invoiceNo:null,status:"quote",customerId:customerId,customerName:cust?cust.name:"",occasion:quote.occasion||"",createdAt:new Date().toISOString(),invoicedAt:null,builder:b,doc:buildDoc(b)};
+  data.jobs.push(job);quote.customerId=customerId;persist();closeOverlay();toast("Saved "+no);openDoc(job.id);
+}
+function convertToInvoice(id){
+  var j=jobById(id);if(!j||j.status==="invoice")return;
+  j.invoiceNo=(data.settings.invoicePrefix||"INV-")+pad3(data.settings.nextInvoice||1);
+  data.settings.nextInvoice=(data.settings.nextInvoice||1)+1;
+  j.status="invoice";j.invoicedAt=new Date().toISOString();
+  persist();toast("Invoice "+j.invoiceNo+" created");openDoc(j.id);
+}
+function duplicateJob(id){
+  var j=jobById(id);if(!j)return;var b=j.builder||{};
+  quote.lines=(b.lines||[]).map(function(l){return{type:l.type,refId:l.refId,qty:l.qty}});
+  quote.text=b.text||"";quote.hours=b.hours||0;quote.misc=(b.misc||[]).map(function(m){return{label:m.label,amt:m.amt}});
+  quote.occasion=j.occasion||"";quote.customerId=j.customerId||null;
+  closeOverlay();go("quote");renderQuote();toast("Loaded into a new quote");
+}
+function deleteJob(id){var j=jobById(id);if(!j)return;if(confirm("Delete this "+(j.status==="invoice"?"invoice":"quote")+"? This can't be undone.")){data.jobs=data.jobs.filter(function(x){return x.id!==id});persist();closeOverlay();renderRecords();toast("Deleted");}}
+
+function openDoc(id){
+  var j=jobById(id);if(!j)return;
+  var isInv=j.status==="invoice", s=data.settings, cust=customerById(j.customerId);
+  var cl=[esc((cust&&cust.name)||j.customerName||"—")];
+  if(cust){if(cust.contact)cl.push(esc(cust.contact));if(cust.address)cl.push(esc(cust.address).replace(/\n/g,"<br>"));}
+  var linesHtml=j.doc.lines.map(function(l){return '<tr><td>'+esc(l.name)+(l.detail?'<span class="d">'+esc(l.detail)+'</span>':'')+'</td><td class="r tnum">'+money(l.amount)+'</td></tr>';}).join("");
+  var terms=isInv?s.invoiceTerms:s.quoteTerms;
+  var head='<div class="doc-head"><div class="doc-brand">'+(s.logo?'<img src="'+s.logo+'" class="doc-logo" alt="logo">':'')
+     +'<div class="doc-biz">'+esc(s.name||"")+'</div>'
+     +(s.address?'<div class="doc-sub">'+esc(s.address).replace(/\n/g,"<br>")+'</div>':'')
+     +(s.contact?'<div class="doc-sub">'+esc(s.contact)+'</div>':'')+'</div>'
+   +'<div class="doc-meta"><div class="doc-type">'+(isInv?"INVOICE":"QUOTE")+'</div>'
+     +'<div class="doc-num">'+esc(isInv?j.invoiceNo:j.quoteNo)+'</div>'
+     +'<div class="doc-sub">'+fmtDate(isInv?j.invoicedAt:j.createdAt)+'</div>'
+     +(isInv&&j.quoteNo?'<div class="doc-sub">Ref '+esc(j.quoteNo)+'</div>':'')+'</div></div>';
+  var parties='<div class="doc-parties"><div><div class="doc-label">Billed to</div><div class="doc-cust">'+cl.join("<br>")+'</div></div>'
+   +(j.occasion?'<div><div class="doc-label">Occasion</div><div>'+esc(j.occasion)+'</div></div>':'')+'</div>';
+  var table='<table class="doc-table"><thead><tr><th>Item</th><th class="r">Amount</th></tr></thead><tbody>'+linesHtml+'</tbody>'
+   +'<tfoot><tr><td class="r">Total</td><td class="r tnum">'+money(j.doc.total)+'</td></tr></tfoot></table>';
+  var blocks=(isInv&&s.payment?'<div class="doc-block"><div class="doc-label">Payment</div><div class="doc-terms">'+esc(s.payment).replace(/\n/g,"<br>")+'</div></div>':'')
+   +(terms?'<div class="doc-block"><div class="doc-label">Terms</div><div class="doc-terms">'+esc(terms).replace(/\n/g,"<br>")+'</div></div>':'');
+  var toolbar='<div id="docToolbar"><button class="btn" id="doc_print">Print / Save as PDF</button>'
+   +(isInv?'':'<button class="btn gold" id="doc_invoice">Convert to invoice</button>')
+   +'<button class="btn ghost" id="doc_dup">Duplicate</button><button class="btn danger" id="doc_del">Delete</button></div>';
+  openOverlay(toolbar+'<div id="docPaper">'+head+parties+table+blocks+'</div>');
+  document.getElementById("doc_print").onclick=function(){document.body.classList.add("doc-print");window.print();};
+  var inv=document.getElementById("doc_invoice");if(inv)inv.onclick=function(){convertToInvoice(j.id);};
+  document.getElementById("doc_dup").onclick=function(){duplicateJob(j.id);};
+  document.getElementById("doc_del").onclick=function(){deleteJob(j.id);};
+}
+
+function openCustomerForm(id,thenSaveQuote){
+  var c=id?customerById(id):{name:"",contact:"",address:""};
+  var html='<h2 class="section-title" style="margin-bottom:14px">'+(id?"Edit customer":"New customer")+'</h2>'
+   +'<label class="fld"><span>Name</span><input type="text" id="cu_name" value="'+esc(c.name||"")+'"></label>'
+   +'<label class="fld"><span>Contact (phone · email)</span><input type="text" id="cu_contact" value="'+esc(c.contact||"")+'"></label>'
+   +'<label class="fld"><span>Address</span><textarea id="cu_addr">'+esc(c.address||"")+'</textarea></label>'
+   +'<div class="inline"><button class="btn" id="cu_save">Save</button><button class="btn ghost" id="cu_cancel">Cancel</button>'
+   +(id?'<button class="btn danger" id="cu_del" style="margin-left:auto">Delete</button>':'')+'</div>';
+  openOverlay(html);
+  document.getElementById("cu_cancel").onclick=function(){if(thenSaveQuote)openSaveQuote();else closeOverlay();};
+  document.getElementById("cu_save").onclick=function(){
+    var name=document.getElementById("cu_name").value.trim();if(!name){toast("Name needed");return;}
+    var contact=document.getElementById("cu_contact").value.trim(), addr=document.getElementById("cu_addr").value.trim(), cid;
+    if(id){var t=customerById(id);t.name=name;t.contact=contact;t.address=addr;cid=id;}
+    else{cid=uid();data.customers.push({id:cid,name:name,contact:contact,address:addr});}
+    persist();
+    if(thenSaveQuote)doSaveQuote(cid);else{closeOverlay();renderRecords();toast("Saved");}
+  };
+  var del=document.getElementById("cu_del");if(del)del.onclick=function(){
+    var used=data.jobs.filter(function(j){return j.customerId===id}).length;
+    if(!confirm("Delete this customer?"+(used?" Their "+used+" document(s) will stay but show without a customer.":"")))return;
+    data.customers=data.customers.filter(function(x){return x.id!==id});persist();closeOverlay();renderRecords();toast("Customer deleted");
+  };
+}
+
+function renderRecords(){
+  var wrap=document.getElementById("recordsBody");if(!wrap)return;
+  var html="";
+  data.customers.slice().sort(function(a,b){return a.name.localeCompare(b.name)}).forEach(function(c){
+    html+=custBlock(c,data.jobs.filter(function(j){return j.customerId===c.id}).sort(byDateDesc));
+  });
+  var orphan=data.jobs.filter(function(j){return !customerById(j.customerId)}).sort(byDateDesc);
+  if(orphan.length)html+=custBlock({id:null,name:"(no customer)",contact:""},orphan);
+  wrap.innerHTML=html||'<div class="empty">No customers or saved documents yet. Build a quote and tap “Save this quote”.</div>';
+  wrap.querySelectorAll("[data-open]").forEach(function(b){b.onclick=function(){openDoc(b.dataset.open);}});
+  wrap.querySelectorAll("[data-custedit]").forEach(function(b){b.onclick=function(){openCustomerForm(b.dataset.custedit);}});
+}
+function custBlock(c,jobs){
+  var rows=jobs.map(function(j){
+    var badge=j.status==="invoice"?'<span class="badge inv">'+esc(j.invoiceNo)+'</span>':'<span class="badge q">'+esc(j.quoteNo)+'</span>';
+    return '<div class="rec-job"><div>'+badge+'<span class="rec-occ">'+esc(j.occasion||"")+'</span><div class="rec-date">'+fmtDate(j.createdAt)+'</div></div>'
+      +'<div class="inline"><span class="tnum" style="font-weight:600">'+money(j.doc.total)+'</span><button class="btn ghost tiny" data-open="'+j.id+'">View</button></div></div>';
+  }).join("")||'<div class="hint" style="margin:2px 0 0">No documents yet.</div>';
+  return '<div class="card card-pad rec-cust"><div class="rec-cust-head"><div><div class="rec-name">'+esc(c.name)+'</div>'+(c.contact?'<div class="rec-sub">'+esc(c.contact)+'</div>':'')+'</div>'
+    +(c.id?'<button class="btn ghost tiny" data-custedit="'+c.id+'">Edit</button>':'')+'</div>'+rows+'</div>';
+}
+function renderLogoPrev(){
+  var p=document.getElementById("s_logoprev"),clr=document.getElementById("s_logoclear");if(!p)return;
+  if(data.settings.logo){p.innerHTML='<img src="'+data.settings.logo+'" style="max-height:56px;max-width:160px;border:1px solid var(--line);border-radius:8px;padding:4px;background:#fff">';if(clr)clr.style.display="";}
+  else{p.innerHTML="";if(clr)clr.style.display="none";}
+}
 
 /* ---------- boot ---------- */
 window.go=go;
