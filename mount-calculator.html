@@ -52,7 +52,7 @@
             line-height: 1.6;
         }
 
-        .container { max-width: 1000px; margin: 0 auto; }
+        .container { max-width: 1180px; margin: 0 auto; }
 
         header { text-align: center; margin-bottom: 24px; }
 
@@ -103,15 +103,28 @@
             background: var(--border);
         }
 
-        .main-layout {
+        .builder-layout {
             display: grid;
-            grid-template-columns: 1fr 1fr;
+            grid-template-columns: minmax(280px, 320px) minmax(220px, 260px) minmax(380px, 1fr);
             gap: 20px;
             align-items: start;
         }
 
-        @media (max-width: 900px) {
-            .main-layout {
+        .sticky-col {
+            position: sticky;
+            top: 20px;
+        }
+
+        @media (max-width: 1080px) {
+            .builder-layout {
+                grid-template-columns: 1fr 1fr;
+            }
+            .doc-panel { grid-column: 1 / -1; }
+            .sticky-col { position: static; }
+        }
+
+        @media (max-width: 700px) {
+            .builder-layout {
                 grid-template-columns: 1fr;
             }
         }
@@ -212,8 +225,8 @@
         .results {
             background: var(--bg-primary);
             border-radius: 8px;
-            padding: 16px;
-            margin-top: 16px;
+            padding: 14px;
+            margin-top: 12px;
             border-left: 4px solid var(--accent);
         }
 
@@ -226,23 +239,29 @@
 
         .price-display {
             text-align: center;
-            padding: 20px;
+            padding: 12px 14px;
             background: rgba(201, 168, 124, 0.1);
             border-radius: 8px;
-            margin-bottom: 16px;
+            margin-bottom: 12px;
         }
 
         .price-label {
-            font-size: 0.85rem;
+            font-size: 0.8rem;
             color: var(--text-secondary);
-            margin-bottom: 6px;
+            margin-bottom: 2px;
         }
 
         .price-value {
             font-family: 'Playfair Display', serif;
-            font-size: 2.5rem;
+            font-size: 1.9rem;
             font-weight: 600;
             color: var(--accent);
+        }
+
+        .price-sub {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-top: 6px;
         }
 
         .bulk-pricing {
@@ -261,8 +280,19 @@
         .bulk-row {
             display: flex;
             justify-content: space-between;
-            padding: 6px 0;
+            padding: 6px 10px;
+            margin: 0 -10px;
+            border-radius: 6px;
             font-size: 0.9rem;
+        }
+
+        .bulk-row.active {
+            background: rgba(201, 168, 124, 0.16);
+        }
+
+        .bulk-row.active .quantity {
+            color: var(--text-primary);
+            font-weight: 600;
         }
 
         .bulk-row .quantity {
@@ -279,6 +309,133 @@
             h1 { font-size: 1.75rem; }
             .input-group { flex-direction: column; gap: 10px; }
         }
+
+        /* ── Quote / invoice builder ── */
+        .btn-secondary {
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            border: 1px solid var(--accent);
+        }
+        .btn-secondary:hover { background: var(--border); }
+
+        .add-row {
+            display: flex;
+            gap: 12px;
+            align-items: flex-end;
+            margin-top: 14px;
+            padding-top: 14px;
+            border-top: 1px solid var(--border);
+        }
+        .qty-field { flex: 0 0 90px; }
+        .add-btn { margin-top: 0; flex: 1; }
+
+        .doc-panel { margin-top: 0; }
+
+        .doc-fields {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-bottom: 16px;
+        }
+        .doc-fields .input-field { flex: 1; min-width: 150px; }
+        .doc-fields .num-field { flex: 0 0 110px; min-width: 0; }
+
+        .items-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+        .items-table th {
+            text-align: left;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            padding: 8px 10px;
+            border-bottom: 1px solid var(--border);
+        }
+        .items-table th.num, .items-table td.num { text-align: right; }
+        .items-table td {
+            padding: 10px;
+            border-bottom: 1px solid var(--border);
+            vertical-align: middle;
+        }
+        .items-table .remove-x {
+            border: none;
+            background: none;
+            color: #c0392b;
+            cursor: pointer;
+            font-size: 1rem;
+            line-height: 1;
+            padding: 2px 6px;
+        }
+        .items-table .remove-x:hover { color: #922b21; }
+        .items-empty {
+            text-align: center;
+            color: var(--text-secondary);
+            padding: 24px 12px;
+            font-size: 0.9rem;
+        }
+        .grand-total-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            margin-top: 14px;
+            padding-top: 14px;
+            border-top: 2px solid var(--accent);
+        }
+        .grand-total-row .label { font-size: 0.95rem; color: var(--text-secondary); }
+        .grand-total-row .amount {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.6rem;
+            font-weight: 600;
+            color: var(--accent);
+        }
+        .doc-actions {
+            display: flex;
+            gap: 12px;
+            margin-top: 18px;
+            flex-wrap: wrap;
+        }
+        .doc-actions .calculate-btn { margin-top: 0; flex: 1; min-width: 170px; }
+        .doc-actions .calculate-btn:disabled {
+            background: var(--border);
+            color: var(--text-secondary);
+            cursor: not-allowed;
+        }
+        .clear-link {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 0.8rem;
+            cursor: pointer;
+            text-decoration: underline;
+            font-family: 'DM Sans', sans-serif;
+        }
+
+        /* ── Printable document (hidden on screen, shown only when printing) ── */
+        #print-doc { display: none; }
+
+        @media print {
+            .menu-btn, .container { display: none !important; }
+            #print-doc { display: block !important; }
+            body { background: #fff; padding: 0; color: #1a1a1a; }
+            @page { margin: 18mm; }
+        }
+
+        .pd-wrap { max-width: 720px; margin: 0 auto; color: #1a1a1a; font-family: 'DM Sans', sans-serif; line-height: 1.5; }
+        .pd-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 24px; }
+        .pd-biz-name { font-family: 'Playfair Display', serif; font-size: 1.6rem; font-weight: 600; margin-bottom: 6px; }
+        .pd-biz-line { font-size: 0.82rem; color: #555; }
+        .pd-meta { text-align: right; white-space: nowrap; }
+        .pd-doctype { font-family: 'Playfair Display', serif; font-size: 1.9rem; font-weight: 600; color: var(--accent); margin-bottom: 6px; }
+        .pd-meta-line { font-size: 0.85rem; color: #333; }
+        .pd-rule { border: none; border-top: 2px solid var(--accent); margin: 18px 0; }
+        .pd-billto-label { font-size: 0.75rem; color: #777; margin-bottom: 3px; }
+        .pd-billto-name { font-size: 1.05rem; font-weight: 600; margin-bottom: 20px; }
+        .pd-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+        .pd-table th { text-align: left; font-size: 0.72rem; color: #777; padding: 8px; border-bottom: 1.5px solid #333; }
+        .pd-table th.num, .pd-table td.num { text-align: right; }
+        .pd-table td { padding: 10px 8px; border-bottom: 1px solid #e2e2e2; }
+        .pd-total { display: flex; justify-content: flex-end; gap: 40px; margin-top: 14px; }
+        .pd-total .lbl { color: #555; align-self: center; }
+        .pd-total .amt { font-family: 'Playfair Display', serif; font-weight: 600; font-size: 1.35rem; }
+        .pd-note { margin-top: 32px; font-size: 0.8rem; color: #666; }
     </style>
 </head>
 <body>
@@ -296,9 +453,9 @@
             </div>
         </div>
 
-        <div class="main-layout">
-            <!-- LEFT COLUMN: Dimensions & Options -->
-            <div class="panel">
+        <div class="builder-layout">
+            <!-- Column 1: dimensions & options -->
+            <div class="panel sticky-col">
                 <h2>Mount Specifications</h2>
                 
                 <div class="input-group">
@@ -329,31 +486,38 @@
                     </label>
                 </div>
 
-                <button class="calculate-btn" onclick="calculatePrice()">Calculate Price</button>
+                <div class="add-row">
+                    <div class="input-field qty-field">
+                        <label for="quantity">Quantity</label>
+                        <input type="number" id="quantity" min="1" step="1" value="1">
+                    </div>
+                    <button class="calculate-btn add-btn" onclick="addItem()">Add to quote/invoice</button>
+                </div>
             </div>
 
-            <!-- RIGHT COLUMN: Pricing Results -->
-            <div class="panel">
+            <!-- Column 2: live pricing preview -->
+            <div class="panel sticky-col">
                 <h2>Pricing</h2>
                 
                 <div id="results-container" style="display: none;">
                     <div class="results">
                         <div class="price-display">
-                            <div class="price-label">Price (Each)</div>
-                            <div class="price-value" id="single-price">£0.00</div>
+                            <div class="price-label" id="live-price-label">Price each</div>
+                            <div class="price-value" id="live-price">£0.00</div>
+                            <div class="price-sub" id="live-total"></div>
                         </div>
 
                         <div class="bulk-pricing">
-                            <h4>Bulk Pricing</h4>
-                            <div class="bulk-row">
+                            <h4>Bulk pricing</h4>
+                            <div class="bulk-row" id="row-10">
                                 <span class="quantity">10+ mounts</span>
                                 <span class="price" id="bulk-10">£0.00 each</span>
                             </div>
-                            <div class="bulk-row">
+                            <div class="bulk-row" id="row-25">
                                 <span class="quantity">25+ mounts</span>
                                 <span class="price" id="bulk-25">£0.00 each</span>
                             </div>
-                            <div class="bulk-row">
+                            <div class="bulk-row" id="row-50">
                                 <span class="quantity">50+ mounts</span>
                                 <span class="price" id="bulk-50">£0.00 each</span>
                             </div>
@@ -362,28 +526,82 @@
                 </div>
 
                 <div id="placeholder" style="text-align: center; padding: 40px 20px; color: var(--text-secondary);">
-                    <p style="font-size: 0.9rem;">Enter dimensions and click Calculate to see pricing</p>
+                    <p style="font-size: 0.9rem;">Enter dimensions to see live pricing</p>
                 </div>
             </div>
+
+            <!-- QUOTE / INVOICE BUILDER -->
+            <div class="panel doc-panel">
+            <h2>Quote &amp; Invoice</h2>
+
+            <div class="doc-fields">
+                <div class="input-field">
+                    <label for="customer-name">Customer name</label>
+                    <input type="text" id="customer-name" placeholder="e.g. J. Smith">
+                </div>
+                <div class="input-field num-field">
+                    <label for="quote-number">Quote No.</label>
+                    <input type="number" id="quote-number" min="1" step="1">
+                </div>
+                <div class="input-field num-field">
+                    <label for="invoice-number">Invoice No.</label>
+                    <input type="number" id="invoice-number" min="1" step="1">
+                </div>
+            </div>
+
+            <table class="items-table">
+                <thead>
+                    <tr>
+                        <th class="num">Qty</th>
+                        <th>Description</th>
+                        <th class="num">Unit</th>
+                        <th class="num">Line total</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody id="items-body"></tbody>
+            </table>
+            <div class="items-empty" id="items-empty">No items yet &mdash; price a mount on the left, set a quantity, then hit &ldquo;Add to quote/invoice&rdquo;.</div>
+
+            <div class="grand-total-row" id="grand-total-wrap" style="display:none;">
+                <span class="label">Grand total</span>
+                <span class="amount" id="grand-total-amount">£0.00</span>
+            </div>
+
+            <div class="doc-actions">
+                <button class="calculate-btn gen-btn" onclick="generateDoc('quote')" disabled>Generate quote (PDF)</button>
+                <button class="calculate-btn gen-btn" onclick="generateDoc('invoice')" disabled>Generate invoice (PDF)</button>
+            </div>
+            <div style="text-align:right; margin-top:10px;">
+                <button class="clear-link" onclick="clearItems()">Clear all items</button>
+            </div>
+        </div>
         </div>
     </div>
+
+    <!-- PRINTABLE DOCUMENT (hidden on screen) -->
+    <div id="print-doc"></div>
 
     <script>
         let currentUnit = 'mm';
 
-        // Pricing configuration (would be on server in production)
+        // ─────────────────────────────────────────────────────────
+        //  PRICING SETTINGS  —  edit the numbers below, save, then
+        //  re-upload this file to GitHub to apply the change.
+        //  These match the desktop Mount Calculator settings.
+        // ─────────────────────────────────────────────────────────
         const config = {
-            sheetLength: 1200,      // mm
-            sheetHeight: 800,       // mm
-            mountSheetCost: 7.00,   // £
-            backingSheetCost: 5.00, // £
-            bagCost: 0.50,          // £
-            markupPercent: 50,      // %
-            doubleMountMarkup: 5,   // %
-            miscCost: 2.00,         // £
-            discount10: 10,         // %
-            discount25: 15,         // %
-            discount50: 20          // %
+            sheetLength: 1200,      // Standard sheet length (mm)
+            sheetHeight: 800,       // Standard sheet height (mm)
+            mountSheetCost: 6.60,   // Mount board sheet (£)
+            backingSheetCost: 4.95, // Backing board sheet (£)
+            bagCost: 0.50,          // Cellophane bag (£)
+            markupPercent: 200,     // Markup (%)
+            doubleMountMarkup: 10,  // Double mount markup (%)
+            miscCost: 0.00,         // Misc cost per mount (£)
+            discount10: 10,         // 10+ mounts discount (%)
+            discount25: 15,         // 25+ mounts discount (%)
+            discount50: 20          // 50+ mounts discount (%)
         };
 
         function setUnit(unit) {
@@ -394,82 +612,282 @@
             const unitLabel = unit === 'mm' ? 'mm' : 'inches';
             document.getElementById('length-unit').textContent = unitLabel;
             document.getElementById('height-unit').textContent = unitLabel;
+            updateLivePreview();
         }
 
-        function calculatePrice() {
-            // Get inputs
-            let length = parseFloat(document.getElementById('mount-length').value);
-            let height = parseFloat(document.getElementById('mount-height').value);
-            
-            if (!length || !height || length <= 0 || height <= 0) {
-                alert('Please enter valid dimensions');
+        function updateLivePreview() {
+            const results = document.getElementById('results-container');
+            const placeholder = document.getElementById('placeholder');
+            const inp = readMountInputs();
+
+            if (!inp) {
+                results.style.display = 'none';
+                placeholder.style.display = 'block';
                 return;
             }
 
-            // Convert to mm if needed
-            if (currentUnit === 'inch') {
-                length = length * 25.4;
-                height = height * 25.4;
+            const qtyRaw = parseInt(document.getElementById('quantity').value, 10);
+            const qty = (!qtyRaw || qtyRaw < 1) ? 1 : qtyRaw;
+
+            const p = computePricing(inp.lengthMm, inp.heightMm, inp.isDouble, inp.hasBacking, inp.hasBag);
+
+            // Quantity-aware "each" price with the correct tier applied (rounded to the penny first)
+            const each = Math.round(unitPriceForQty(p, qty) * 100) / 100;
+            const total = Math.round(each * qty * 100) / 100;
+
+            document.getElementById('live-price').textContent = `\u00a3${each.toFixed(2)}`;
+            document.getElementById('live-price-label').textContent = `Price each \u00b7 qty ${qty}`;
+            document.getElementById('live-total').textContent = `\u00a3${total.toFixed(2)} for ${qty}`;
+
+            // Tier reference rows
+            const tierPrice = (d) => Math.round(((p.boardPrice * (1 - d / 100)) + p.fixedCosts) * 100) / 100;
+            document.getElementById('bulk-10').textContent = `\u00a3${tierPrice(config.discount10).toFixed(2)} each`;
+            document.getElementById('bulk-25').textContent = `\u00a3${tierPrice(config.discount25).toFixed(2)} each`;
+            document.getElementById('bulk-50').textContent = `\u00a3${tierPrice(config.discount50).toFixed(2)} each`;
+
+            // Highlight the tier that applies to the current quantity
+            const activeTier = qty >= 50 ? 50 : qty >= 25 ? 25 : qty >= 10 ? 10 : 0;
+            document.getElementById('row-10').classList.toggle('active', activeTier === 10);
+            document.getElementById('row-25').classList.toggle('active', activeTier === 25);
+            document.getElementById('row-50').classList.toggle('active', activeTier === 50);
+
+            results.style.display = 'block';
+            placeholder.style.display = 'none';
+        }
+
+        // Recompute the preview whenever any mount input changes
+        ['mount-length', 'mount-height', 'quantity'].forEach(id => {
+            document.getElementById(id).addEventListener('input', updateLivePreview);
+        });
+        ['double-mount', 'backing-board', 'cellophane-bag'].forEach(id => {
+            document.getElementById(id).addEventListener('change', updateLivePreview);
+        });
+
+        // ─────────────────────────────────────────────────────────
+        //  QUOTE / INVOICE BUILDER
+        // ─────────────────────────────────────────────────────────
+
+        // Business details printed on documents
+        const business = {
+            name: 'Featurepiece Frames',
+            lines: [
+                'Unit 18c Gortrush Industrial Estate',
+                'Omagh, Co Tyrone, N. Ireland'
+            ],
+            phone: '028 8299 0169',
+            email: 'frames@featurepiece.com'
+        };
+
+        // Shared pricing core — the single source of truth for all pricing
+        function computePricing(lengthMm, heightMm, isDouble, hasBacking, hasBag) {
+            const sheetArea = config.sheetLength * config.sheetHeight;
+            const mountArea = lengthMm * heightMm;
+            const markupMultiplier = 1 + (config.markupPercent / 100);
+
+            let mountPrice = mountArea * (config.mountSheetCost / sheetArea) * markupMultiplier;
+            if (isDouble) {
+                mountPrice = (mountPrice * 2) * (1 + config.doubleMountMarkup / 100);
             }
+            let backingPrice = 0;
+            if (hasBacking) {
+                backingPrice = mountArea * (config.backingSheetCost / sheetArea) * markupMultiplier;
+            }
+            const boardPrice = mountPrice + backingPrice;
+            const fixedCosts = (hasBag ? config.bagCost : 0) + config.miscCost;
+            return { boardPrice, fixedCosts };
+        }
+
+        // Correct bulk tier for a given quantity (matches the desktop app: 10 / 25 / 50)
+        function unitPriceForQty(p, qty) {
+            let discount = 0;
+            if (qty >= 50) discount = config.discount50;
+            else if (qty >= 25) discount = config.discount25;
+            else if (qty >= 10) discount = config.discount10;
+            return (p.boardPrice * (1 - discount / 100)) + p.fixedCosts;
+        }
+
+        function escapeHtml(s) {
+            return String(s).replace(/[&<>"']/g, c => ({
+                '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+            }[c]));
+        }
+
+        // Read the current mount inputs; returns null if dimensions are invalid
+        function readMountInputs() {
+            let length = parseFloat(document.getElementById('mount-length').value);
+            let height = parseFloat(document.getElementById('mount-height').value);
+            if (!length || !height || length <= 0 || height <= 0) return null;
 
             const isDouble = document.getElementById('double-mount').checked;
             const hasBacking = document.getElementById('backing-board').checked;
             const hasBag = document.getElementById('cellophane-bag').checked;
 
-            // Calculate mount area
-            const mountArea = length * height;
-            const sheetArea = config.sheetLength * config.sheetHeight;
+            const unitLabel = currentUnit === 'inch' ? 'in' : 'mm';
+            const lengthMm = currentUnit === 'inch' ? length * 25.4 : length;
+            const heightMm = currentUnit === 'inch' ? height * 25.4 : height;
+            const fmt = currentUnit === 'inch' ? (v => v.toFixed(1)) : (v => String(v));
 
-            // Calculate mount cost
-            const costPerSqMm = config.mountSheetCost / sheetArea;
-            const mountMaterialCost = mountArea * costPerSqMm;
-            const markupMultiplier = 1 + (config.markupPercent / 100);
-            let mountPrice = mountMaterialCost * markupMultiplier;
+            const parts = [`${fmt(length)} × ${fmt(height)} ${unitLabel}`];
+            if (isDouble) parts.push('Double');
+            if (hasBacking) parts.push('Backing');
+            if (hasBag) parts.push('Bag');
 
-            // Apply double mount markup
-            if (isDouble) {
-                const doubleMountMultiplier = 1 + (config.doubleMountMarkup / 100);
-                mountPrice = (mountPrice * 2) * doubleMountMultiplier;
-            }
-
-            // Calculate backing board cost
-            let backingPrice = 0;
-            if (hasBacking) {
-                const backingCostPerSqMm = config.backingSheetCost / sheetArea;
-                const backingMaterialCost = mountArea * backingCostPerSqMm;
-                backingPrice = backingMaterialCost * markupMultiplier;
-            }
-
-            // Board price (what gets discounted)
-            const boardPrice = mountPrice + backingPrice;
-
-            // Fixed costs (not discounted)
-            const bagPrice = hasBag ? config.bagCost : 0;
-            const fixedCosts = bagPrice + config.miscCost;
-
-            // Calculate prices
-            const singlePrice = boardPrice + fixedCosts;
-            const bulk10Price = (boardPrice * (1 - config.discount10/100)) + fixedCosts;
-            const bulk25Price = (boardPrice * (1 - config.discount25/100)) + fixedCosts;
-            const bulk50Price = (boardPrice * (1 - config.discount50/100)) + fixedCosts;
-
-            // Display results
-            document.getElementById('single-price').textContent = `£${singlePrice.toFixed(2)}`;
-            document.getElementById('bulk-10').textContent = `£${bulk10Price.toFixed(2)} each`;
-            document.getElementById('bulk-25').textContent = `£${bulk25Price.toFixed(2)} each`;
-            document.getElementById('bulk-50').textContent = `£${bulk50Price.toFixed(2)} each`;
-
-            document.getElementById('results-container').style.display = 'block';
-            document.getElementById('placeholder').style.display = 'none';
+            return { lengthMm, heightMm, isDouble, hasBacking, hasBag, desc: parts.join(' • ') };
         }
 
-        // Allow Enter key to calculate
-        document.getElementById('mount-length').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') calculatePrice();
-        });
-        document.getElementById('mount-height').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') calculatePrice();
-        });
+        let docItems = [];
+
+        function addItem() {
+            const inp = readMountInputs();
+            if (!inp) { alert('Please enter valid dimensions first.'); return; }
+            const qty = parseInt(document.getElementById('quantity').value, 10);
+            if (!qty || qty < 1) { alert('Please enter a quantity of 1 or more.'); return; }
+
+            const p = computePricing(inp.lengthMm, inp.heightMm, inp.isDouble, inp.hasBacking, inp.hasBag);
+            // Round the unit price to the penny FIRST, then multiply, so the printed
+            // document always reconciles (qty × unit = line total, exactly).
+            const unit = Math.round(unitPriceForQty(p, qty) * 100) / 100;
+            const total = Math.round(unit * qty * 100) / 100;
+
+            docItems.push({ qty, desc: inp.desc, unit, total });
+            renderItems();
+        }
+
+        function removeItem(i) { docItems.splice(i, 1); renderItems(); }
+
+        function clearItems() {
+            if (docItems.length && confirm('Clear all items from the list?')) {
+                docItems = [];
+                renderItems();
+            }
+        }
+
+        function renderItems() {
+            const body = document.getElementById('items-body');
+            const empty = document.getElementById('items-empty');
+            const totalWrap = document.getElementById('grand-total-wrap');
+            const genBtns = document.querySelectorAll('.gen-btn');
+
+            body.innerHTML = '';
+
+            if (docItems.length === 0) {
+                empty.style.display = 'block';
+                totalWrap.style.display = 'none';
+                genBtns.forEach(b => b.disabled = true);
+                return;
+            }
+
+            empty.style.display = 'none';
+            totalWrap.style.display = 'flex';
+            genBtns.forEach(b => b.disabled = false);
+
+            let grand = 0;
+            docItems.forEach((it, i) => {
+                grand += it.total;
+                const tr = document.createElement('tr');
+                tr.innerHTML =
+                    `<td class="num">${it.qty}</td>` +
+                    `<td>${escapeHtml(it.desc)}</td>` +
+                    `<td class="num">£${it.unit.toFixed(2)}</td>` +
+                    `<td class="num">£${it.total.toFixed(2)}</td>` +
+                    `<td class="num"><button class="remove-x" title="Remove" onclick="removeItem(${i})">✕</button></td>`;
+                body.appendChild(tr);
+            });
+            document.getElementById('grand-total-amount').textContent = `£${grand.toFixed(2)}`;
+        }
+
+        // Per-browser document numbering (remembered in localStorage)
+        function numberKey(kind) { return kind === 'quote' ? 'fp-next-quote' : 'fp-next-invoice'; }
+        function getNextNumber(kind) {
+            let n = parseInt(localStorage.getItem(numberKey(kind)), 10);
+            if (!n || n < 1) n = 1000;
+            return n;
+        }
+        function setNextNumber(kind, n) {
+            try { localStorage.setItem(numberKey(kind), String(n)); } catch (e) { /* storage unavailable */ }
+        }
+        function initNumbers() {
+            document.getElementById('quote-number').value = getNextNumber('quote');
+            document.getElementById('invoice-number').value = getNextNumber('invoice');
+        }
+
+        function fmtDate(d) {
+            const dd = String(d.getDate()).padStart(2, '0');
+            const mm = String(d.getMonth() + 1).padStart(2, '0');
+            return `${dd}/${mm}/${d.getFullYear()}`;
+        }
+
+        function generateDoc(kind) {
+            if (docItems.length === 0) { alert('Add at least one item first.'); return; }
+
+            const isQuote = kind === 'quote';
+            const numFieldId = isQuote ? 'quote-number' : 'invoice-number';
+            let num = parseInt(document.getElementById(numFieldId).value, 10);
+            if (!num || num < 1) num = getNextNumber(kind);
+
+            const customer = document.getElementById('customer-name').value.trim();
+            const today = new Date();
+            const title = isQuote ? 'Quotation' : 'Invoice';
+            const forLabel = isQuote ? 'Quote for' : 'Invoice to';
+
+            let grand = 0;
+            const rows = docItems.map(it => {
+                grand += it.total;
+                return `<tr><td class="num">${it.qty}</td><td>${escapeHtml(it.desc)}</td>` +
+                       `<td class="num">£${it.unit.toFixed(2)}</td><td class="num">£${it.total.toFixed(2)}</td></tr>`;
+            }).join('');
+
+            const bizLines = business.lines.map(l => `<div class="pd-biz-line">${escapeHtml(l)}</div>`).join('');
+            let metaLines = `<div class="pd-meta-line">No. ${num}</div>` +
+                            `<div class="pd-meta-line">Date: ${fmtDate(today)}</div>`;
+            if (isQuote) {
+                const exp = new Date(today.getTime() + 30 * 24 * 60 * 60 * 1000);
+                metaLines += `<div class="pd-meta-line">Valid until: ${fmtDate(exp)}</div>`;
+            }
+            const note = isQuote
+                ? 'This is a quotation and not a request for payment. Prices are valid for 30 days from the date shown above.'
+                : 'Thank you for your business.';
+
+            document.getElementById('print-doc').innerHTML = `
+              <div class="pd-wrap">
+                <div class="pd-head">
+                  <div>
+                    <div class="pd-biz-name">${escapeHtml(business.name)}</div>
+                    ${bizLines}
+                    <div class="pd-biz-line">${escapeHtml(business.phone)} &nbsp;·&nbsp; ${escapeHtml(business.email)}</div>
+                  </div>
+                  <div class="pd-meta">
+                    <div class="pd-doctype">${title}</div>
+                    ${metaLines}
+                  </div>
+                </div>
+                <hr class="pd-rule">
+                <div class="pd-billto-label">${forLabel}</div>
+                <div class="pd-billto-name">${customer ? escapeHtml(customer) : '—'}</div>
+                <table class="pd-table">
+                  <thead><tr>
+                    <th class="num">Qty</th><th>Description</th>
+                    <th class="num">Unit price</th><th class="num">Amount</th>
+                  </tr></thead>
+                  <tbody>${rows}</tbody>
+                </table>
+                <div class="pd-total"><span class="lbl">Total</span><span class="amt">£${grand.toFixed(2)}</span></div>
+                <div class="pd-note">${escapeHtml(note)}</div>
+              </div>`;
+
+            // Advance the stored counter and show the next number in the field
+            setNextNumber(kind, num + 1);
+            document.getElementById(numFieldId).value = num + 1;
+
+            document.title = `${title} ${num} - ${customer || 'Featurepiece Frames'}`;
+            window.print();
+            document.title = 'Mount Calculator';
+        }
+
+        // Initialise on load
+        initNumbers();
+        renderItems();
+        updateLivePreview();
     </script>
 </body>
 </html>
